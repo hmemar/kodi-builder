@@ -335,6 +335,9 @@ jobs:
           echo "🎨 Renaming app to: $APP"
           find ~/kodi/tools/android/packaging -type f -name "*.xml" -o -name "*.gradle" | \
             xargs sed -i "s|>Kodi<|>$APP<|g; s|\"Kodi\"|\"$APP\"|g" 2>/dev/null || true
+          # Launcher label comes from @APP_NAME@ in strings.xml.in (keep internal APP_NAME so lib names stay valid)
+          sed -i "s|@APP_NAME@|$APP|g" ~/kodi/tools/android/packaging/xbmc/strings.xml.in
+          grep -n app_name ~/kodi/tools/android/packaging/xbmc/strings.xml.in
 
       - name: Apply custom package ID
         if: github.event.inputs.package_id != 'org.xbmc.kodi'
@@ -343,6 +346,9 @@ jobs:
           echo "📦 Setting package ID: $PKG"
           find ~/kodi/tools/android/packaging -type f | \
             xargs sed -i "s|org\.xbmc\.kodi|$PKG|g" 2>/dev/null || true
+          # Android package comes from APP_PACKAGE in version.txt
+          sed -i "s|^APP_PACKAGE .*|APP_PACKAGE $PKG|" ~/kodi/version.txt
+          grep -n '^APP_PACKAGE' ~/kodi/version.txt
 
       - name: Decode base64 branding images
         run: |
