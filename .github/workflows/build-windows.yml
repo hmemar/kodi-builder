@@ -68,6 +68,8 @@ jobs:
           $app = "C:\kodi\project\Win32BuildSetup\BUILD_WIN32\application"
           if (-not (Test-Path "$app\kodi.exe")) { Get-ChildItem C:\kodi\project\Win32BuildSetup -Recurse -Depth 2 | Select -First 50; throw "application folder not built" }
           Rename-Item "$app\kodi.exe" "Husham Media.exe"
+          Copy-Item "$env:GITHUB_WORKSPACE\kodi-config\sources.xml","$env:GITHUB_WORKSPACE\kodi-config\advancedsettings.xml" "$app\userdata\" -Force
+          Get-ChildItem "$app\userdata"
           New-Item -ItemType Directory "$app\portable_data" | Out-Null
           @"
           Husham Media for Windows x64 (portable)
