@@ -1,0 +1,130 @@
+name: 🐧 Build Husham Media (Linux x86_64)
+
+on:
+  workflow_dispatch:
+    inputs:
+      kodi_tag:
+        description: 'Upstream Omega tag'
+        required: true
+        default: '21.3-Omega'
+      create_release:
+        description: 'Publish as a GitHub Release?'
+        required: true
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Linux x86_64 (${{ github.event.inputs.kodi_tag }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 340
+    env:
+      PREFIX: /opt/husham-media
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies (docs/README.Ubuntu.md)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends autoconf automake autopoint gettext autotools-dev cmake curl default-jre gawk gcc g++ gperf libasound2-dev libass-dev libavahi-client-dev libavahi-common-dev libbluetooth-dev libbluray-dev libbz2-dev libcdio-dev libp8-platform-dev libcrossguid-dev libcurl4-openssl-dev libcwiid-dev libdbus-1-dev libdrm-dev libegl1-mesa-dev libenca-dev libflac-dev libfmt-dev libfontconfig-dev libfreetype6-dev libfribidi-dev libfstrcmp-dev libgcrypt-dev libgif-dev libgles2-mesa-dev libgl1-mesa-dev libglu1-mesa-dev libgnutls28-dev libgpg-error-dev libiso9660-dev libjpeg-dev liblcms2-dev libltdl-dev liblzo2-dev libmicrohttpd-dev libnfs-dev libogg-dev libpcre3-dev libplist-dev libpng-dev libpulse-dev libshairplay-dev libsmbclient-dev libspdlog-dev libsqlite3-dev libssl-dev libtag1-dev libtiff5-dev libtinyxml-dev libtinyxml2-dev libtool libudev-dev libunistring-dev libva-dev libvdpau-dev libvorbis-dev libxmu-dev libxrandr-dev libxslt1-dev libxt-dev lsb-release meson nasm ninja-build python3-dev python3-pil python3-pip rapidjson-dev swig unzip uuid-dev zip zlib1g-dev libcec-dev liblirc-dev libflatbuffers-dev libmysqlclient-dev libdav1d-dev ccache
+
+      - name: Clone upstream source
+        run: git clone --depth 1 -b "${{ github.event.inputs.kodi_tag }}" https://github.com/xbmc/xbmc.git "$HOME/kodi"
+
+      - name: Apply Husham Media branding
+        run: python3 scripts/brand-desktop.py "$HOME/kodi" kodi-config "$HOME/brand"
+
+      - name: ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: linux-ccache-${{ github.event.inputs.kodi_tag }}-${{ github.run_id }}
+          restore-keys: linux-ccache-${{ github.event.inputs.kodi_tag }}-
+
+      - name: Configure
+        run: |
+          mkdir -p "$HOME/build" && cd "$HOME/build"
+          cmake "$HOME/kodi" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=$PREFIX \
+            -DCORE_PLATFORM_NAME=x11 -DAPP_RENDER_SYSTEM=gl \
+            -DENABLE_INTERNAL_FFMPEG=ON -DENABLE_INTERNAL_CROSSGUID=ON \
+            -DENABLE_INTERNAL_FSTRCMP=ON -DENABLE_INTERNAL_UDFREAD=ON \
+            -DENABLE_INTERNAL_FLATBUFFERS=ON -DENABLE_INTERNAL_SPDLOG=ON -DENABLE_INTERNAL_FMT=ON \
+            -DENABLE_INTERNAL_EXIV2=ON -DENABLE_INTERNAL_TAGLIB=ON -DENABLE_INTERNAL_NFS=ON \
+            -DENABLE_TESTING=OFF -DENABLE_CCACHE=ON
+
+      - name: Build
+        run: |
+          export CCACHE_DIR=$HOME/.ccache
+          cd "$HOME/build" && cmake --build . -j"$(nproc)"
+
+      - name: Install and package tarball
+        id: pkg
+        run: |
+          cd "$HOME/build"
+          DESTDIR="$HOME/stage" cmake --install .
+          ROOT="$HOME/stage$PREFIX"
+          # Branded launcher that works from any extracted location
+          cat > "$ROOT/husham-media" <<'SH'
+          #!/bin/sh
+          HERE="$(cd "$(dirname "$0")" && pwd)"
+          export KODI_HOME="$HERE/share/kodi"
+          export KODI_BIN_HOME="$HERE/lib/kodi"
+          exec "$HERE/lib/kodi/kodi-x11" "$@"
+          SH
+          sed -i 's/^          //' "$ROOT/husham-media"
+          chmod +x "$ROOT/husham-media"
+          cp "$HOME/brand/icon.png" "$ROOT/husham-media.png"
+          cat > "$ROOT/husham-media.desktop" <<'D'
+          [Desktop Entry]
+          Type=Application
+          Name=Husham Media
+          Comment=Husham Media player
+          Exec=/opt/husham-media/husham-media
+          Icon=/opt/husham-media/husham-media.png
+          Categories=AudioVideo;Video;Player;
+          D
+          sed -i 's/^          //' "$ROOT/husham-media.desktop"
+          # Hide upstream-branded desktop entries
+          rm -f "$ROOT/share/applications/"*.desktop
+          cat > "$ROOT/README-HUSHAM-MEDIA.txt" <<'R'
+          Husham Media for Linux x86_64 (built on Ubuntu 22.04)
+          Install:  sudo tar -xJf Husham-Media-linux-x86_64.tar.xz -C /opt
+                    cp /opt/husham-media/husham-media.desktop ~/.local/share/applications/
+          Run:      /opt/husham-media/husham-media
+          Needs the runtime libraries of Ubuntu 22.04+/Debian 12 (see the build log for the package list).
+          Based on open-source software licensed GPL-2.0-or-later.
+          Source: https://github.com/hmemar/kodi-builder and https://github.com/xbmc/xbmc
+          Husham Media is not affiliated with or endorsed by the XBMC Foundation.
+          R
+          sed -i 's/^          //' "$ROOT/README-HUSHAM-MEDIA.txt"
+          cp "$HOME/kodi/LICENSE.md" "$ROOT/LICENSE.md" 2>/dev/null || true
+          cd "$HOME/stage/opt"
+          tar -cJf "$HOME/Husham-Media-linux-x86_64.tar.xz" husham-media
+          ls -la "$HOME/Husham-Media-linux-x86_64.tar.xz"
+          echo "file=$HOME/Husham-Media-linux-x86_64.tar.xz" >> $GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Husham-Media-linux-x86_64
+          path: ${{ steps.pkg.outputs.file }}
+
+      - name: Publish release
+        if: github.event.inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: linux-${{ github.run_number }}
+          name: "Husham Media — Linux x86_64 — Build #${{ github.run_number }}"
+          body: |
+            ## Husham Media for Linux (x86_64)
+            Extract to /opt: `sudo tar -xJf Husham-Media-linux-x86_64.tar.xz -C /opt`, then run `/opt/husham-media/husham-media`.
+            Built on Ubuntu 22.04; needs the matching runtime libraries.
+
+            Based on open-source software licensed GPL-2.0-or-later. Source: this repository and upstream [xbmc/xbmc](https://github.com/xbmc/xbmc) (`${{ github.event.inputs.kodi_tag }}`).
+            Husham Media is not affiliated with or endorsed by the XBMC Foundation.
+          files: ${{ steps.pkg.outputs.file }}
