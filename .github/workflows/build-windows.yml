@@ -1,0 +1,105 @@
+name: 🪟 Build Husham Media (Windows x64)
+
+on:
+  workflow_dispatch:
+    inputs:
+      kodi_tag:
+        description: 'Upstream Omega tag'
+        required: true
+        default: '21.3-Omega'
+      create_release:
+        description: 'Publish as a GitHub Release?'
+        required: true
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Windows x64 (${{ github.event.inputs.kodi_tag }})
+    runs-on: windows-2022
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone upstream source
+        shell: bash
+        run: git clone --depth 1 -b "${{ github.event.inputs.kodi_tag }}" https://github.com/xbmc/xbmc.git /c/kodi
+
+      - name: Apply Husham Media branding
+        shell: bash
+        run: |
+          python -m pip install --quiet pillow
+          python scripts/brand-desktop.py /c/kodi kodi-config /c/brand
+          cp /c/brand/icon.ico /c/kodi/tools/windows/packaging/media/application.ico
+
+      - name: Download prebuilt dependencies
+        shell: cmd
+        run: |
+          cd /d C:\kodi\tools\buildsteps\windows\x64
+          call download-dependencies.bat
+
+      - name: Download msys2
+        shell: cmd
+        run: |
+          cd /d C:\kodi\tools\buildsteps\windows\x64
+          call download-msys2.bat
+
+      - name: Build mingw libs (ffmpeg etc.)
+        shell: cmd
+        run: |
+          cd /d C:\kodi\tools\buildsteps\windows\x64
+          call make-mingwlibs.bat noprompt
+
+      - name: Build and assemble (BuildSetup)
+        shell: cmd
+        continue-on-error: true
+        run: |
+          cd /d C:\kodi\tools\buildsteps\windows\x64
+          call BuildSetup.bat noprompt nobinaryaddons clean
+
+      - name: Package portable zip
+        id: pkg
+        shell: pwsh
+        run: |
+          $app = "C:\kodi\project\Win32BuildSetup\BUILD_WIN32\application"
+          if (-not (Test-Path "$app\kodi.exe")) { Get-ChildItem C:\kodi\project\Win32BuildSetup -Recurse -Depth 2 | Select -First 50; throw "application folder not built" }
+          Rename-Item "$app\kodi.exe" "Husham Media.exe"
+          New-Item -ItemType Directory "$app\portable_data" | Out-Null
+          @"
+          Husham Media for Windows x64 (portable)
+          Unzip anywhere and run "Husham Media.exe". Settings live in portable_data\ when started with -p,
+          e.g. create a shortcut: "Husham Media.exe" -p
+          Based on open-source software licensed GPL-2.0-or-later.
+          Source: https://github.com/hmemar/kodi-builder and https://github.com/xbmc/xbmc
+          Husham Media is not affiliated with or endorsed by the XBMC Foundation.
+          "@ | Set-Content "$app\README-HUSHAM-MEDIA.txt"
+          Set-Content "$app\Husham Media (portable).bat" '@start "" "%~dp0Husham Media.exe" -p'
+          $parent = Split-Path $app
+          Rename-Item $app "Husham Media"
+          $zip = "C:\Husham-Media-windows-x64-portable.zip"
+          Compress-Archive -Path "$parent\Husham Media" -DestinationPath $zip
+          Get-Item $zip | Format-List Name,Length
+          "file=$zip" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Husham-Media-windows-x64
+          path: ${{ steps.pkg.outputs.file }}
+
+      - name: Publish release
+        if: github.event.inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-${{ github.run_number }}
+          name: "Husham Media — Windows x64 — Build #${{ github.run_number }}"
+          body: |
+            ## Husham Media for Windows (x64, portable)
+            Unzip and run `Husham Media.exe` (or `Husham Media (portable).bat` to keep settings in the folder). Unsigned, so SmartScreen will grumble: More info → Run anyway.
+
+            Based on open-source software licensed GPL-2.0-or-later. Source: this repository and upstream [xbmc/xbmc](https://github.com/xbmc/xbmc) (`${{ github.event.inputs.kodi_tag }}`).
+            Husham Media is not affiliated with or endorsed by the XBMC Foundation.
+          files: ${{ steps.pkg.outputs.file }}
