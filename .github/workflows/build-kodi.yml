@@ -344,6 +344,15 @@ jobs:
           find ~/kodi/tools/android/packaging -type f | \
             xargs sed -i "s|org\.xbmc\.kodi|$PKG|g" 2>/dev/null || true
 
+      - name: Decode base64 branding images
+        run: |
+          cd "${{ github.workspace }}/kodi-config"
+          for n in icon splash; do
+            if [ ! -f "$n.png" ] && [ -f "$n.png.b64" ]; then
+              base64 -d "$n.png.b64" > "$n.png" && echo "✅ Decoded $n.png"
+            fi
+          done
+
       - name: Apply custom icon
         run: |
           ICON="${{ github.workspace }}/kodi-config/icon.png"
