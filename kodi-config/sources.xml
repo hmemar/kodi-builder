@@ -7,6 +7,12 @@
   Full reference: https://kodi.wiki/view/Sources.xml
 -->
 <sources>
+  <!-- Optional addon repo example (disabled so no upstream branding shows in-app):
+    <source>
+      <name>Kodi Piers Repo</name>
+      <path pathversion="1">https://mirrors.kodi.tv/addons/piers/</path>
+    </source>
+  -->
 
   <programs>
     <default pathversion="1"></default>

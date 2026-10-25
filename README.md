@@ -26,6 +26,10 @@ Download the APK from Releases after the build completes, then host it on your w
 
 *Based on the open-source Kodi project. Source code available in this repository.*
 
+## Engine
+
+Built from the upstream Piers branch (Kodi 22 prerelease, rolling master), so builds are marked as prerelease.
+
 ## License
 
 This project is licensed under GPL-2.0-or-later, matching upstream [xbmc/xbmc](https://github.com/xbmc/xbmc).
