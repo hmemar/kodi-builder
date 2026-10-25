@@ -14,4 +14,4 @@
 #   3. Copy the link to the latest .zip file
 #
 # YouTube plugin (for easy access to Dr Husham Memar channel)
-https://mirrors.kodi.tv/addons/omega/plugin.video.youtube/plugin.video.youtube-7.4.4.zip
+https://mirrors.kodi.tv/addons/piers/plugin.video.youtube/plugin.video.youtube-7.4.4.zip

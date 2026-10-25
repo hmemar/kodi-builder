@@ -1132,13 +1132,13 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: build-${{ github.run_number }}
-          name: "${{ github.event.inputs.app_name }} ${{ github.event.inputs.branch }} — Build #${{ github.run_number }}"
+          name: "${{ github.event.inputs.app_name }} — Build #${{ github.run_number }}"
           body: |
-            ## Custom Kodi APK
+            ## Husham Media APK
 
             | Setting | Value |
             |---------|-------|
-            | Kodi release | `${{ steps.kodi.outputs.release }}` |
+            | Engine release | `${{ steps.kodi.outputs.release }}` |
             | Source ref | `${{ steps.kodi.outputs.source_ref }}` (`${{ steps.source.outputs.source_sha }}`) |
             | Addon channel | `${{ steps.kodi.outputs.addon_channel }}` |
             | App name | ${{ github.event.inputs.app_name }} |

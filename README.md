@@ -25,3 +25,9 @@ Download the APK from Releases after the build completes, then host it on your w
 ---
 
 *Based on the open-source Kodi project. Source code available in this repository.*
+
+## License
+
+This project is licensed under GPL-2.0-or-later, matching upstream [xbmc/xbmc](https://github.com/xbmc/xbmc).
+
+Husham Media is not affiliated with or endorsed by the XBMC Foundation. Kodi is a trademark of the XBMC Foundation.
