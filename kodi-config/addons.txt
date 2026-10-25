@@ -1,5 +1,5 @@
 # addons.txt — Pre-installed addons
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
 # Add one addon ZIP download URL per line.
 # Lines starting with # are ignored.
 #
@@ -13,16 +13,5 @@
 #   2. Click into the addon folder (e.g. plugin.video.youtube/)
 #   3. Copy the link to the latest .zip file
 #
-# EXAMPLES (remove the # to enable):
-#
-# YouTube plugin
-# https://mirrors.kodi.tv/addons/piers/plugin.video.youtube/plugin.video.youtube-6.8.6+matrix.2.zip
-#
-# Skin: Estuary (default skin, already included)
-# https://mirrors.kodi.tv/addons/piers/skin.estuary/skin.estuary-2.1.16.zip
-#
-# Skin: Aeon Nox
-# https://mirrors.kodi.tv/addons/piers/skin.aeon.nox.silvo/skin.aeon.nox.silvo-5.10.9.zip
-#
-# Skin shortcuts helper
-# https://mirrors.kodi.tv/addons/piers/script.skinshortcuts/script.skinshortcuts-1.0.23.zip
+# YouTube plugin (for easy access to Dr Husham Memar channel)
+https://mirrors.kodi.tv/addons/omega/plugin.video.youtube/plugin.video.youtube-7.4.4.zip
