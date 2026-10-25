@@ -1,0 +1,120 @@
+name: 🍎 Build Husham Media (macOS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      kodi_tag:
+        description: 'Upstream Omega tag'
+        required: true
+        default: '21.3-Omega'
+      arch:
+        description: 'CPU architecture'
+        required: true
+        default: 'arm64'
+        type: choice
+        options: ['arm64', 'x86_64']
+      create_release:
+        description: 'Publish as a GitHub Release?'
+        required: true
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: macOS ${{ github.event.inputs.arch }} (${{ github.event.inputs.kodi_tag }})
+    runs-on: ${{ github.event.inputs.arch == 'arm64' && 'macos-14' || 'macos-13' }}
+    timeout-minutes: 350
+    env:
+      DEPENDS: ${{ github.workspace }}/../xbmc-depends
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tools
+        run: |
+          brew install autoconf automake libtool pkg-config gettext nasm || true
+          python3 -m pip install --break-system-packages --quiet pillow || python3 -m pip install --quiet pillow
+          xcodebuild -version
+
+      - name: Clone upstream source
+        run: git clone --depth 1 -b "${{ github.event.inputs.kodi_tag }}" https://github.com/xbmc/xbmc.git "$HOME/kodi"
+
+      - name: Apply Husham Media branding
+        run: |
+          python3 scripts/brand-desktop.py "$HOME/kodi" kodi-config "$HOME/brand"
+          IS="$HOME/kodi/tools/darwin/packaging/media/osx/icon.iconset"
+          for f in "$IS"/*.png; do
+            px=$(sips -g pixelWidth "$f" | awk '/pixelWidth/{print $2}')
+            sips -z $px $px "$HOME/brand/icon.png" --out "$f" >/dev/null
+          done
+          echo "iconset replaced"
+
+      - name: Build depends
+        run: |
+          HOST=${{ github.event.inputs.arch == 'arm64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}
+          cd "$HOME/kodi/tools/depends"
+          ./bootstrap
+          ./configure --host=$HOST --with-platform=macos --prefix="$HOME/xbmc-depends"
+          make -j"$(sysctl -n hw.ncpu)" > "$HOME/depends.log" 2>&1 || { tail -200 "$HOME/depends.log"; exit 1; }
+          tail -5 "$HOME/depends.log"
+
+      - name: Generate and build
+        run: |
+          make -C "$HOME/kodi/tools/depends/target/cmakebuildsys" BUILD_DIR="$HOME/kodi-build"
+          cd "$HOME/kodi-build"
+          make -j"$(sysctl -n hw.ncpu)" > "$HOME/build.log" 2>&1 || { tail -200 "$HOME/build.log"; exit 1; }
+          tail -5 "$HOME/build.log"
+
+      - name: Bundle app
+        run: |
+          cd "$HOME/kodi-build"
+          make dmg > "$HOME/dmg.log" 2>&1 || { tail -100 "$HOME/dmg.log"; }
+          APP=$(find "$HOME/kodi-build" -maxdepth 5 -name "Kodi.app" -type d | head -1)
+          [ -n "$APP" ] || { tail -100 "$HOME/dmg.log"; exit 1; }
+          echo "APP=$APP" >> $GITHUB_ENV
+
+      - name: Rebrand and make unsigned dmg
+        id: pkg
+        run: |
+          OUT="$HOME/out"; mkdir -p "$OUT"
+          ditto "$APP" "$OUT/Husham Media.app"
+          PL="$OUT/Husham Media.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName Husham Media" "$PL" || /usr/libexec/PlistBuddy -c "Add :CFBundleName string Husham Media" "$PL"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Husham Media" "$PL" || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Husham Media" "$PL"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.husham.media" "$PL" || true
+          codesign --force --deep -s - "$OUT/Husham Media.app" || true
+          cat > "$OUT/README-HUSHAM-MEDIA.txt" <<'R'
+          Husham Media for macOS (unsigned)
+          Drag "Husham Media" to Applications. First launch: right-click > Open, or run
+            xattr -dr com.apple.quarantine "/Applications/Husham Media.app"
+          Based on open-source software licensed GPL-2.0-or-later.
+          Source: https://github.com/hmemar/kodi-builder and https://github.com/xbmc/xbmc
+          Husham Media is not affiliated with or endorsed by the XBMC Foundation.
+          R
+          ln -s /Applications "$OUT/Applications"
+          DMG="$HOME/Husham-Media-macos-${{ github.event.inputs.arch }}.dmg"
+          hdiutil create -volname "Husham Media" -srcfolder "$OUT" -ov -format UDZO "$DMG"
+          ls -la "$DMG"
+          echo "file=$DMG" >> $GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Husham-Media-macos-${{ github.event.inputs.arch }}
+          path: ${{ steps.pkg.outputs.file }}
+
+      - name: Publish release
+        if: github.event.inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: macos-${{ github.event.inputs.arch }}-${{ github.run_number }}
+          name: "Husham Media — macOS ${{ github.event.inputs.arch }} — Build #${{ github.run_number }}"
+          body: |
+            ## Husham Media for macOS (${{ github.event.inputs.arch }}, unsigned)
+            Open the dmg, drag Husham Media to Applications, then right-click → Open the first time (it isn't notarised).
+
+            Based on open-source software licensed GPL-2.0-or-later. Source: this repository and upstream [xbmc/xbmc](https://github.com/xbmc/xbmc) (`${{ github.event.inputs.kodi_tag }}`).
+            Husham Media is not affiliated with or endorsed by the XBMC Foundation.
+          files: ${{ steps.pkg.outputs.file }}
