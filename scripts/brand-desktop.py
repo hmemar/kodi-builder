@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply Husham Media branding to a desktop Kodi source tree (Linux/Windows/macOS).
+"""Apply Husham Play branding to a desktop Kodi source tree (Linux/Windows/macOS).
 Usage: brand-desktop.py <kodi-src> <kodi-config-dir> <out-images-dir>"""
 import base64, io, os, re, shutil, sys, urllib.request, zipfile
 src, cfg, out = sys.argv[1:4]
