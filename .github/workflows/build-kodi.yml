@@ -6,7 +6,7 @@ on:
       branch:
         description: 'Kodi release to build'
         required: true
-        default: 'Piers'
+        default: 'Omega'
         type: choice
         options:
           - Piers
@@ -25,11 +25,11 @@ on:
       app_name:
         description: 'App display name (shown on launcher)'
         required: true
-        default: 'Kodi'
+        default: 'Husham Play'
       package_id:
         description: 'Android package ID (change to install alongside official Kodi)'
         required: true
-        default: 'org.xbmc.kodi'
+        default: 'com.husham.media'
       apk_filename:
         description: 'APK file name (without .apk — leave blank to auto-generate)'
         required: false
@@ -1149,7 +1149,9 @@ jobs:
           tag_name: build-${{ github.run_number }}
           name: "${{ github.event.inputs.app_name }} — Build #${{ github.run_number }}"
           body: |
-            ## Husham Media APK
+            ## ${{ github.event.inputs.app_name }} APK
+
+            Free media player based on the open-source Kodi project (GPL-2.0-or-later). Source: this repository and upstream [xbmc/xbmc](https://github.com/xbmc/xbmc). Not affiliated with or endorsed by the XBMC Foundation.
 
             | Setting | Value |
             |---------|-------|

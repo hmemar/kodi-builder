@@ -1,4 +1,4 @@
-name: 🐧 Build Husham Media (Linux x86_64)
+name: 🐧 Build Husham Play (Linux x86_64)
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 340
     env:
-      PREFIX: /opt/husham-media
+      PREFIX: /opt/husham-play
     steps:
       - uses: actions/checkout@v4
 
@@ -35,7 +35,7 @@ jobs:
       - name: Clone upstream source
         run: git clone --depth 1 -b "${{ github.event.inputs.kodi_tag }}" https://github.com/xbmc/xbmc.git "$HOME/kodi"
 
-      - name: Apply Husham Media branding
+      - name: Apply Husham Play branding
         run: python3 scripts/brand-desktop.py "$HOME/kodi" kodi-config "$HOME/brand"
 
       - name: ccache
@@ -70,48 +70,48 @@ jobs:
           DESTDIR="$HOME/stage" cmake --install .
           ROOT="$HOME/stage$PREFIX"
           # Branded launcher that works from any extracted location
-          cat > "$ROOT/husham-media" <<'SH'
+          cat > "$ROOT/husham-play" <<'SH'
           #!/bin/sh
           HERE="$(cd "$(dirname "$0")" && pwd)"
           export KODI_HOME="$HERE/share/kodi"
           export KODI_BIN_HOME="$HERE/lib/kodi"
           exec "$HERE/lib/kodi/kodi-x11" "$@"
           SH
-          sed -i 's/^          //' "$ROOT/husham-media"
-          chmod +x "$ROOT/husham-media"
-          cp "$HOME/brand/icon.png" "$ROOT/husham-media.png"
-          cat > "$ROOT/husham-media.desktop" <<'D'
+          sed -i 's/^          //' "$ROOT/husham-play"
+          chmod +x "$ROOT/husham-play"
+          cp "$HOME/brand/icon.png" "$ROOT/husham-play.png"
+          cat > "$ROOT/husham-play.desktop" <<'D'
           [Desktop Entry]
           Type=Application
-          Name=Husham Media
-          Comment=Husham Media player
-          Exec=/opt/husham-media/husham-media
-          Icon=/opt/husham-media/husham-media.png
+          Name=Husham Play
+          Comment=Husham Play player
+          Exec=/opt/husham-play/husham-play
+          Icon=/opt/husham-play/husham-play.png
           Categories=AudioVideo;Video;Player;
           D
-          sed -i 's/^          //' "$ROOT/husham-media.desktop"
+          sed -i 's/^          //' "$ROOT/husham-play.desktop"
           # Hide upstream-branded desktop entries
           rm -f "$ROOT/share/applications/"*.desktop
           cat > "$ROOT/README-HUSHAM-MEDIA.txt" <<'R'
-          Husham Media for Linux x86_64 (built on Ubuntu 22.04)
-          Install:  sudo tar -xJf Husham-Media-linux-x86_64.tar.xz -C /opt
-                    cp /opt/husham-media/husham-media.desktop ~/.local/share/applications/
-          Run:      /opt/husham-media/husham-media
+          Husham Play for Linux x86_64 (built on Ubuntu 22.04)
+          Install:  sudo tar -xJf Husham-Play-linux-x86_64.tar.xz -C /opt
+                    cp /opt/husham-play/husham-play.desktop ~/.local/share/applications/
+          Run:      /opt/husham-play/husham-play
           Needs the runtime libraries of Ubuntu 22.04+/Debian 12 (see the build log for the package list).
           Based on open-source software licensed GPL-2.0-or-later.
           Source: https://github.com/hmemar/kodi-builder and https://github.com/xbmc/xbmc
-          Husham Media is not affiliated with or endorsed by the XBMC Foundation.
+          Husham Play is not affiliated with or endorsed by the XBMC Foundation.
           R
           sed -i 's/^          //' "$ROOT/README-HUSHAM-MEDIA.txt"
           cp "$HOME/kodi/LICENSE.md" "$ROOT/LICENSE.md" 2>/dev/null || true
           cd "$HOME/stage/opt"
-          tar -cJf "$HOME/Husham-Media-linux-x86_64.tar.xz" husham-media
-          ls -la "$HOME/Husham-Media-linux-x86_64.tar.xz"
-          echo "file=$HOME/Husham-Media-linux-x86_64.tar.xz" >> $GITHUB_OUTPUT
+          tar -cJf "$HOME/Husham-Play-linux-x86_64.tar.xz" husham-play
+          ls -la "$HOME/Husham-Play-linux-x86_64.tar.xz"
+          echo "file=$HOME/Husham-Play-linux-x86_64.tar.xz" >> $GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Husham-Media-linux-x86_64
+          name: Husham-Play-linux-x86_64
           path: ${{ steps.pkg.outputs.file }}
 
       - name: Publish release
@@ -119,12 +119,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: linux-${{ github.run_number }}
-          name: "Husham Media — Linux x86_64 — Build #${{ github.run_number }}"
+          name: "Husham Play — Linux x86_64 — Build #${{ github.run_number }}"
           body: |
-            ## Husham Media for Linux (x86_64)
-            Extract to /opt: `sudo tar -xJf Husham-Media-linux-x86_64.tar.xz -C /opt`, then run `/opt/husham-media/husham-media`.
+            ## Husham Play for Linux (x86_64)
+            Extract to /opt: `sudo tar -xJf Husham-Play-linux-x86_64.tar.xz -C /opt`, then run `/opt/husham-play/husham-play`.
             Built on Ubuntu 22.04; needs the matching runtime libraries.
 
             Based on open-source software licensed GPL-2.0-or-later. Source: this repository and upstream [xbmc/xbmc](https://github.com/xbmc/xbmc) (`${{ github.event.inputs.kodi_tag }}`).
-            Husham Media is not affiliated with or endorsed by the XBMC Foundation.
+            Husham Play is not affiliated with or endorsed by the XBMC Foundation.
           files: ${{ steps.pkg.outputs.file }}

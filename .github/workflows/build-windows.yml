@@ -1,4 +1,4 @@
-name: 🪟 Build Husham Media (Windows x64)
+name: 🪟 Build Husham Play (Windows x64)
 
 on:
   workflow_dispatch:
@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: git clone --depth 1 -b "${{ github.event.inputs.kodi_tag }}" https://github.com/xbmc/xbmc.git /c/kodi
 
-      - name: Apply Husham Media branding
+      - name: Apply Husham Play branding
         shell: bash
         run: |
           python -m pip install --quiet pillow
@@ -67,29 +67,29 @@ jobs:
         run: |
           $app = "C:\kodi\project\Win32BuildSetup\BUILD_WIN32\application"
           if (-not (Test-Path "$app\kodi.exe")) { Get-ChildItem C:\kodi\project\Win32BuildSetup -Recurse -Depth 2 | Select -First 50; throw "application folder not built" }
-          Rename-Item "$app\kodi.exe" "Husham Media.exe"
+          Rename-Item "$app\kodi.exe" "Husham Play.exe"
           Copy-Item "$env:GITHUB_WORKSPACE\kodi-config\sources.xml","$env:GITHUB_WORKSPACE\kodi-config\advancedsettings.xml" "$app\userdata\" -Force
           Get-ChildItem "$app\userdata"
           New-Item -ItemType Directory "$app\portable_data" | Out-Null
           @"
-          Husham Media for Windows x64 (portable)
-          Unzip anywhere and run "Husham Media.exe". Settings live in portable_data\ when started with -p,
-          e.g. create a shortcut: "Husham Media.exe" -p
+          Husham Play for Windows x64 (portable)
+          Unzip anywhere and run "Husham Play.exe". Settings live in portable_data\ when started with -p,
+          e.g. create a shortcut: "Husham Play.exe" -p
           Based on open-source software licensed GPL-2.0-or-later.
           Source: https://github.com/hmemar/kodi-builder and https://github.com/xbmc/xbmc
-          Husham Media is not affiliated with or endorsed by the XBMC Foundation.
+          Husham Play is not affiliated with or endorsed by the XBMC Foundation.
           "@ | Set-Content "$app\README-HUSHAM-MEDIA.txt"
-          Set-Content "$app\Husham Media (portable).bat" '@start "" "%~dp0Husham Media.exe" -p'
+          Set-Content "$app\Husham Play (portable).bat" '@start "" "%~dp0Husham Play.exe" -p'
           $parent = Split-Path $app
-          Rename-Item $app "Husham Media"
-          $zip = "C:\Husham-Media-windows-x64-portable.zip"
-          Compress-Archive -Path "$parent\Husham Media" -DestinationPath $zip
+          Rename-Item $app "Husham Play"
+          $zip = "C:\Husham-Play-windows-x64-portable.zip"
+          Compress-Archive -Path "$parent\Husham Play" -DestinationPath $zip
           Get-Item $zip | Format-List Name,Length
           "file=$zip" >> $env:GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Husham-Media-windows-x64
+          name: Husham-Play-windows-x64
           path: ${{ steps.pkg.outputs.file }}
 
       - name: Publish release
@@ -97,11 +97,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: windows-${{ github.run_number }}
-          name: "Husham Media — Windows x64 — Build #${{ github.run_number }}"
+          name: "Husham Play — Windows x64 — Build #${{ github.run_number }}"
           body: |
-            ## Husham Media for Windows (x64, portable)
-            Unzip and run `Husham Media.exe` (or `Husham Media (portable).bat` to keep settings in the folder). Unsigned, so SmartScreen will grumble: More info → Run anyway.
+            ## Husham Play for Windows (x64, portable)
+            Unzip and run `Husham Play.exe` (or `Husham Play (portable).bat` to keep settings in the folder). Unsigned, so SmartScreen will grumble: More info → Run anyway.
 
             Based on open-source software licensed GPL-2.0-or-later. Source: this repository and upstream [xbmc/xbmc](https://github.com/xbmc/xbmc) (`${{ github.event.inputs.kodi_tag }}`).
-            Husham Media is not affiliated with or endorsed by the XBMC Foundation.
+            Husham Play is not affiliated with or endorsed by the XBMC Foundation.
           files: ${{ steps.pkg.outputs.file }}
