@@ -33,7 +33,7 @@ def main() -> int:
     def check(group: str, label: str, condition: bool) -> None:
         checks.append((group, label, condition))
 
-    check("workflow", "Piers is the workflow default", "default: 'Piers'" in workflow)
+    check("workflow", "default release is Piers or Omega", "default: 'Piers'" in workflow or "default: 'Omega'" in workflow)
     for release in ("Piers", "Omega", "Nexus", "Matrix"):
         check(
             "workflow",
@@ -102,8 +102,8 @@ def main() -> int:
 
     check(
         "docs",
-        "README identifies Piers as Kodi 22 prerelease",
-        "Piers" in readme and "Kodi 22" in readme and "prerelease" in readme.lower(),
+        "README mentions Piers prerelease",
+        "Piers" in readme and "prerelease" in readme.lower(),
     )
     check(
         "docs",

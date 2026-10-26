@@ -30,7 +30,7 @@ Husham Play was previously called Husham Media (package ID `com.husham.media` is
 
 ## Engine
 
-Built from the stable upstream Omega (21.x) branch. Piers (22, prerelease) is available but currently fails upstream.
+Built from the stable upstream Omega (21.x) branch. Piers (Kodi 22, prerelease) is available but currently fails upstream.
 
 ## License
 
