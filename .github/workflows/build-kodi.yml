@@ -437,17 +437,29 @@ jobs:
             *) echo "Unsupported ABI $ABI"; exit 1 ;;
           esac
           python3 scripts/stage-addons.py ~/kodi "${{ github.workspace }}/kodi-config" "$PLATFORM"
-          # Keep staged-addons mirror for later PREFIX injection
+          # Keep staged-addons mirror for later PREFIX / APK injection
           mkdir -p ~/staged-addons
           while IFS= read -r line; do
-            aid=$(echo "$line" | sed -n 's|.*/addons/\([^/]*\)/\*.*|\1|p')
-            [ -n "$aid" ] && [ -d ~/kodi/addons/"$aid" ] && cp -a ~/kodi/addons/"$aid" ~/staged-addons/ || true
+            line=$(echo "$line" | tr -d '\r' | sed 's/#.*//;s/^[[:space:]]*//;s/[[:space:]]*$//')
+            [ -z "$line" ] && continue
+            # Match both "addons/id/*" and "/addons/id/*"
+            aid=$(echo "$line" | sed -n 's|^/*addons/\([^/]*\)/\*.*|\1|p')
+            [ -z "$aid" ] && aid=$(echo "$line" | sed -n 's|.*/addons/\([^/]*\)/\*.*|\1|p')
+            [ -n "$aid" ] && [ -d ~/kodi/addons/"$aid" ] && cp -a ~/kodi/addons/"$aid" ~/staged-addons/ && echo "staged $aid" || true
           done < ~/kodi/cmake/installdata/common/addons.txt || true
-          # Also copy all non-core staged custom addons by comparing to bundled list
-          for d in youtube archive radiobrowser soundcloud podcasts inputstreamhelper requests xmltodict opensubtitles openmeteo husham iptvsimple adaptive ffmpegdirect rtmp; do
-            true
+          # Explicit binary + companion add-ons
+          for aid in pvr.iptvsimple inputstream.adaptive inputstream.ffmpegdirect inputstream.rtmp \
+                     plugin.program.husham skin.husham.play \
+                     plugin.video.youtube plugin.video.archive_org plugin.audio.radio_browser \
+                     plugin.audio.soundcloud plugin.audio.podcasts \
+                     script.module.inputstreamhelper script.module.requests script.module.xmltodict \
+                     service.subtitles.opensubtitles_com weather.openmeteo; do
+            [ -d ~/kodi/addons/"$aid" ] && cp -a ~/kodi/addons/"$aid" ~/staged-addons/ && echo "staged $aid" || true
           done
-          ls ~/kodi/addons | grep -E '^(plugin|script|service|weather|pvr|inputstream)\.' || true
+          echo "=== staged-addons ==="
+          ls ~/staged-addons || true
+          find ~/staged-addons -name '*.so' | head -20 || true
+          ls ~/kodi/addons | grep -E '^(plugin|script|service|weather|pvr|inputstream|skin)\.' || true
 
       - name: Brand Husham Play skin (Estuary fork)
         run: |
@@ -1061,6 +1073,82 @@ jobs:
           fi
           echo "✅ Found APK: $APK"
           echo "apk_path=$APK" >> $GITHUB_OUTPUT
+
+      - name: Inject binary add-on native libs into APK
+        id: injectlibs
+        run: |
+          set -euo pipefail
+          APK="${{ steps.locate.outputs.apk_path }}"
+          ABI="${{ steps.abi.outputs.value }}"
+          case "$ABI" in
+            arm64-v8a) PLATFORM=android-aarch64 ;;
+            armeabi-v7a) PLATFORM=android-armv7 ;;
+            x86_64) PLATFORM=android-x86_64 ;;
+            *) PLATFORM=android-aarch64 ;;
+          esac
+          [ -n "$APK" ] && [ -f "$APK" ] || { echo "No APK"; exit 1; }
+          TMP=$(mktemp -d)
+          mkdir -p "$TMP/lib/$ABI" "$TMP/extract"
+          # From staged tree first
+          if [ -d "$HOME/staged-addons" ]; then
+            while IFS= read -r -d '' so; do
+              base=$(basename "$so")
+              case "$base" in
+                lib*.so) dest="$base" ;;
+                *.so) dest="lib$base" ;;
+                *) continue ;;
+              esac
+              cp -fp "$so" "$TMP/lib/$ABI/$dest"
+              echo "  staged → $dest"
+            done < <(find "$HOME/staged-addons" -type f -name '*.so' -print0 2>/dev/null)
+          fi
+          # Guaranteed fallback: download Omega binary zips for this ABI
+          BF="${{ github.workspace }}/kodi-config/binary-addons.txt"
+          if [ -f "$BF" ]; then
+            while IFS= read -r line || [ -n "$line" ]; do
+              line=$(echo "$line" | tr -d '\r' | sed 's/#.*//;s/^[[:space:]]*//;s/[[:space:]]*$//')
+              [ -z "$line" ] && continue
+              aid=$(echo "$line" | awk '{print $1}')
+              ver=$(echo "$line" | awk '{print $2}')
+              [ -z "$aid" ] || [ -z "$ver" ] && continue
+              # Skip if already have a matching lib
+              if ls "$TMP/lib/$ABI"/lib"${aid}".so "$TMP/lib/$ABI"/"${aid}".so 2>/dev/null | grep -q .; then
+                echo "  have $aid already"
+                continue
+              fi
+              url="https://mirrors.kodi.tv/addons/omega/${aid}+${PLATFORM}/${aid}-${ver}.zip"
+              echo "download $url"
+              if curl -fsSL -o "$TMP/extract/${aid}.zip" "$url"; then
+                unzip -qo "$TMP/extract/${aid}.zip" -d "$TMP/extract"
+                while IFS= read -r -d '' so; do
+                  base=$(basename "$so")
+                  case "$base" in
+                    lib*.so) dest="$base" ;;
+                    *.so) dest="lib$base" ;;
+                    *) continue ;;
+                  esac
+                  cp -fp "$so" "$TMP/lib/$ABI/$dest"
+                  echo "  mirror → $dest"
+                done < <(find "$TMP/extract/$aid" -type f -name '*.so' -print0 2>/dev/null)
+              else
+                echo "⚠️ failed $url"
+              fi
+            done < "$BF"
+          fi
+          COUNT=$(find "$TMP/lib/$ABI" -type f -name '*.so' | wc -l)
+          echo "Collected $COUNT native libs for lib/$ABI/"
+          ls -la "$TMP/lib/$ABI/" || true
+          if [ "$COUNT" -eq 0 ]; then
+            echo "❌ No binary add-on .so to inject"
+            exit 1
+          fi
+          (
+            cd "$TMP"
+            zip -u -X "$APK" lib/$ABI/*.so
+          )
+          echo "✅ Injected into APK"
+          unzip -l "$APK" | grep -E "lib/$ABI/lib(pvr|inputstream)" | head -20
+          rm -rf "$TMP"
 
       - name: Sign and zipalign APK
         id: sign
