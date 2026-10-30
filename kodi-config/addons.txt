@@ -1,17 +1,13 @@
-# addons.txt — Pre-installed addons
-# ─────────────────────────────────────────────────────────────────
-# Add one addon ZIP download URL per line.
-# Lines starting with # are ignored.
+# Husham Play 1.1 — official Omega add-ons (python / script). One ZIP URL per line.
+# Binary add-ons (PVR / InputStream) are listed in binary-addons.txt and resolved per platform.
 #
-# Find addon ZIPs at:
-#   https://mirrors.kodi.tv/addons/piers/        (for Piers / Kodi 22 builds)
-#   https://mirrors.kodi.tv/addons/omega/        (for Omega / Kodi 21 builds)
-#   https://mirrors.kodi.tv/addons/nexus/        (for Nexus / Kodi 20 builds)
-#
-# HOW TO FIND THE RIGHT URL:
-#   1. Go to the mirror URL for your Kodi version above
-#   2. Click into the addon folder (e.g. plugin.video.youtube/)
-#   3. Copy the link to the latest .zip file
-#
-# YouTube plugin (for easy access to Dr Husham Memar channel)
 https://mirrors.kodi.tv/addons/omega/plugin.video.youtube/plugin.video.youtube-7.4.4.zip
+https://mirrors.kodi.tv/addons/omega/plugin.video.archive.org/plugin.video.archive.org-1.0.0.zip
+https://mirrors.kodi.tv/addons/omega/plugin.audio.radiobrowser/plugin.audio.radiobrowser-2.0.0.zip
+https://mirrors.kodi.tv/addons/omega/plugin.audio.soundcloud/plugin.audio.soundcloud-4.1.0.zip
+https://mirrors.kodi.tv/addons/omega/plugin.audio.podcasts/plugin.audio.podcasts-2.3.3.zip
+https://mirrors.kodi.tv/addons/omega/script.module.inputstreamhelper/script.module.inputstreamhelper-0.8.6.zip
+https://mirrors.kodi.tv/addons/omega/script.module.requests/script.module.requests-2.31.0.zip
+https://mirrors.kodi.tv/addons/omega/script.module.xmltodict/script.module.xmltodict-0.12.0+matrix.2.zip
+https://mirrors.kodi.tv/addons/omega/service.subtitles.opensubtitles-com/service.subtitles.opensubtitles-com-1.0.90.zip
+https://mirrors.kodi.tv/addons/omega/weather.openmeteo/weather.openmeteo-1.0.29.zip

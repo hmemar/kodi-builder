@@ -36,7 +36,9 @@ jobs:
         run: git clone --depth 1 -b "${{ github.event.inputs.kodi_tag }}" https://github.com/xbmc/xbmc.git "$HOME/kodi"
 
       - name: Apply Husham Play branding
-        run: python3 scripts/brand-desktop.py "$HOME/kodi" kodi-config "$HOME/brand"
+        run: |
+          export HUSHAM_PLATFORM=linux
+          python3 scripts/brand-desktop.py "$HOME/kodi" kodi-config "$HOME/brand" linux
 
       - name: ccache
         uses: actions/cache@v4
@@ -63,13 +65,58 @@ jobs:
           export CCACHE_DIR=$HOME/.ccache
           cd "$HOME/build" && cmake --build . -j"$(nproc)"
 
-      - name: Install and package tarball
+      - name: Install, binary add-ons, package tarball
         id: pkg
         run: |
+          set -euo pipefail
           cd "$HOME/build"
           DESTDIR="$HOME/stage" cmake --install .
           ROOT="$HOME/stage$PREFIX"
-          # Branded launcher that works from any extracted location
+          # Build official binary add-ons from source (no Linux zips on the Omega mirror)
+          mkdir -p "$HOME/binadd"
+          set +e
+          cmake "$HOME/kodi/cmake/addons" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$ROOT" \
+            -DADDONS_TO_BUILD="pvr.iptvsimple inputstream.adaptive inputstream.ffmpegdirect inputstream.rtmp" \
+            -DPACKAGE_ZIP=OFF \
+            -DBUILD_DIR="$HOME/binadd" \
+            > "$HOME/binadd-cmake.log" 2>&1
+          CMAKE_RC=$?
+          set -e
+          if [ $CMAKE_RC -eq 0 ]; then
+            cmake --build "$HOME/binadd" -j"$(nproc)" > "$HOME/binadd-build.log" 2>&1 || {
+              echo "Binary add-on build had errors; continuing with python add-ons only"
+              tail -80 "$HOME/binadd-build.log" || true
+            }
+          else
+            echo "Binary add-on cmake configure failed; users can install PVR from the official repo"
+            tail -80 "$HOME/binadd-cmake.log" || true
+          fi
+          # Copy any built addons into tree and register
+          if [ -d "$ROOT/share/kodi/addons" ]; then
+            for d in "$HOME/kodi/addons"/plugin.* "$HOME/kodi/addons"/script.* \
+                     "$HOME/kodi/addons"/service.* "$HOME/kodi/addons"/weather.* \
+                     "$HOME/kodi/addons"/skin.husham.play "$HOME/kodi/addons"/pvr.* \
+                     "$HOME/kodi/addons"/inputstream.*; do
+              [ -e "$d" ] || continue
+              cp -a "$d" "$ROOT/share/kodi/addons/" 2>/dev/null || true
+            done
+            if [ -f "$ROOT/share/kodi/system/addon-manifest.xml" ]; then
+              for d in "$ROOT/share/kodi/addons"/plugin.* "$ROOT/share/kodi/addons"/script.* \
+                       "$ROOT/share/kodi/addons"/service.* "$ROOT/share/kodi/addons"/weather.* \
+                       "$ROOT/share/kodi/addons"/skin.husham.play "$ROOT/share/kodi/addons"/pvr.* \
+                       "$ROOT/share/kodi/addons"/inputstream.*; do
+                [ -e "$d" ] || continue
+                aid=$(basename "$d")
+                if ! grep -q "<addon>${aid}</addon>" "$ROOT/share/kodi/system/addon-manifest.xml"; then
+                  sed -i "s|</addons>|  <addon>${aid}</addon>\n</addons>|" "$ROOT/share/kodi/system/addon-manifest.xml"
+                fi
+              done
+            fi
+            mkdir -p "$ROOT/share/kodi/userdata"
+            cp "$HOME/kodi/userdata/"*.xml "$ROOT/share/kodi/userdata/" 2>/dev/null || true
+          fi
           cat > "$ROOT/husham-play" <<'SH'
           #!/bin/sh
           HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -90,41 +137,44 @@ jobs:
           Categories=AudioVideo;Video;Player;
           D
           sed -i 's/^          //' "$ROOT/husham-play.desktop"
-          # Hide upstream-branded desktop entries
           rm -f "$ROOT/share/applications/"*.desktop
-          cat > "$ROOT/README-HUSHAM-MEDIA.txt" <<'R'
-          Husham Play for Linux x86_64 (built on Ubuntu 22.04)
-          Install:  sudo tar -xJf Husham-Play-linux-x86_64.tar.xz -C /opt
+          cat > "$ROOT/README-HUSHAM-PLAY.txt" <<'R'
+          Husham Play 1.1 for Linux x86_64 (built on Ubuntu 22.04)
+          Install:  sudo tar -xJf Husham-Play-1.1-linux-x86_64.tar.xz -C /opt
                     cp /opt/husham-play/husham-play.desktop ~/.local/share/applications/
           Run:      /opt/husham-play/husham-play
-          Needs the runtime libraries of Ubuntu 22.04+/Debian 12 (see the build log for the package list).
+          Needs the runtime libraries of Ubuntu 22.04+/Debian 12.
           Based on open-source software licensed GPL-2.0-or-later.
           Source: https://github.com/hmemar/kodi-builder and https://github.com/xbmc/xbmc
-          Husham Play is not affiliated with or endorsed by the XBMC Foundation.
+          Husham Play is not affiliated with or endorsed by the XBMC Foundation / Kodi Foundation.
+          Husham Play provides no content — only use services and media you have the right to access.
           R
-          sed -i 's/^          //' "$ROOT/README-HUSHAM-MEDIA.txt"
+          sed -i 's/^          //' "$ROOT/README-HUSHAM-PLAY.txt"
           cp "$HOME/kodi/LICENSE.md" "$ROOT/LICENSE.md" 2>/dev/null || true
           cd "$HOME/stage/opt"
-          tar -cJf "$HOME/Husham-Play-linux-x86_64.tar.xz" husham-play
-          ls -la "$HOME/Husham-Play-linux-x86_64.tar.xz"
-          echo "file=$HOME/Husham-Play-linux-x86_64.tar.xz" >> $GITHUB_OUTPUT
+          tar -cJf "$HOME/Husham-Play-1.1-linux-x86_64.tar.xz" husham-play
+          ls -la "$HOME/Husham-Play-1.1-linux-x86_64.tar.xz"
+          echo "file=$HOME/Husham-Play-1.1-linux-x86_64.tar.xz" >> $GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Husham-Play-linux-x86_64
+          name: Husham-Play-1.1-linux-x86_64
           path: ${{ steps.pkg.outputs.file }}
 
       - name: Publish release
         if: github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: linux-${{ github.run_number }}
-          name: "Husham Play — Linux x86_64 — Build #${{ github.run_number }}"
+          tag_name: v1.1-linux-${{ github.run_number }}
+          name: "Husham Play 1.1 — Linux x86_64 — Build #${{ github.run_number }}"
           body: |
-            ## Husham Play for Linux (x86_64)
-            Extract to /opt: `sudo tar -xJf Husham-Play-linux-x86_64.tar.xz -C /opt`, then run `/opt/husham-play/husham-play`.
+            ## Husham Play 1.1 for Linux (x86_64)
+            Extract to /opt: `sudo tar -xJf Husham-Play-1.1-linux-x86_64.tar.xz -C /opt`, then run `/opt/husham-play/husham-play`.
             Built on Ubuntu 22.04; needs the matching runtime libraries.
 
+            Pre-configured with legal official add-ons, Husham companion add-on and Husham Play skin. Provides no content.
+            Binary PVR/InputStream add-ons are built when the Linux binary-addon step succeeds; otherwise install IPTV Simple Client from the official repository after first launch.
+
             Based on open-source software licensed GPL-2.0-or-later. Source: this repository and upstream [xbmc/xbmc](https://github.com/xbmc/xbmc) (`${{ github.event.inputs.kodi_tag }}`).
-            Husham Play is not affiliated with or endorsed by the XBMC Foundation.
+            Husham Play is not affiliated with or endorsed by the XBMC Foundation / Kodi Foundation.
           files: ${{ steps.pkg.outputs.file }}

@@ -1,0 +1,8 @@
+# Binary add-ons from the official Omega mirror (platform folder suffix added at build time).
+# Format: <addon_id> <version>
+# Platforms with official zips: android-aarch64 android-armv7 windows-x86_64 osx-arm64 osx-x86_64
+# Linux: built from source during the Linux workflow (no official mirror zip).
+pvr.iptvsimple 21.11.0
+inputstream.adaptive 21.5.25
+inputstream.ffmpegdirect 21.3.8
+inputstream.rtmp 21.1.2

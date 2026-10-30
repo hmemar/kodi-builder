@@ -44,7 +44,9 @@ jobs:
 
       - name: Apply Husham Play branding
         run: |
-          python3 scripts/brand-desktop.py "$HOME/kodi" kodi-config "$HOME/brand"
+          PLATFORM=${{ github.event.inputs.arch == 'arm64' && 'osx-arm64' || 'osx-x86_64' }}
+          export HUSHAM_PLATFORM=$PLATFORM
+          python3 scripts/brand-desktop.py "$HOME/kodi" kodi-config "$HOME/brand" "$PLATFORM"
           IS="$HOME/kodi/tools/darwin/packaging/media/osx/icon.iconset"
           for f in "$IS"/*.png; do
             px=$(sips -g pixelWidth "$f" | awk '/pixelWidth/{print $2}')
@@ -81,40 +83,57 @@ jobs:
         run: |
           OUT="$HOME/out"; mkdir -p "$OUT"
           ditto "$APP" "$OUT/Husham Play.app"
+          # Ensure userdata defaults + addons from branded source are in the app bundle
+          RES="$OUT/Husham Play.app/Contents/Resources/Kodi"
+          if [ -d "$HOME/kodi/addons" ] && [ -d "$RES/addons" ]; then
+            for d in "$HOME/kodi/addons"/plugin.* "$HOME/kodi/addons"/script.* \
+                     "$HOME/kodi/addons"/service.* "$HOME/kodi/addons"/weather.* \
+                     "$HOME/kodi/addons"/pvr.* "$HOME/kodi/addons"/inputstream.* \
+                     "$HOME/kodi/addons"/skin.husham.play; do
+              [ -e "$d" ] || continue
+              cp -a "$d" "$RES/addons/" 2>/dev/null || true
+            done
+          fi
+          if [ -d "$RES/userdata" ]; then
+            cp "$HOME/kodi/userdata/"*.xml "$RES/userdata/" 2>/dev/null || true
+          fi
           PL="$OUT/Husham Play.app/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleName Husham Play" "$PL" || /usr/libexec/PlistBuddy -c "Add :CFBundleName string Husham Play" "$PL"
           /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Husham Play" "$PL" || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Husham Play" "$PL"
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.husham.media" "$PL" || true
           codesign --force --deep -s - "$OUT/Husham Play.app" || true
-          cat > "$OUT/README-HUSHAM-MEDIA.txt" <<'R'
-          Husham Play for macOS (unsigned)
+          cat > "$OUT/README-HUSHAM-PLAY.txt" <<'R'
+          Husham Play 1.1 for macOS (unsigned)
           Drag "Husham Play" to Applications. First launch: right-click > Open, or run
             xattr -dr com.apple.quarantine "/Applications/Husham Play.app"
           Based on open-source software licensed GPL-2.0-or-later.
           Source: https://github.com/hmemar/kodi-builder and https://github.com/xbmc/xbmc
-          Husham Play is not affiliated with or endorsed by the XBMC Foundation.
+          Husham Play is not affiliated with or endorsed by the XBMC Foundation / Kodi Foundation.
+          Husham Play provides no content — only use services and media you have the right to access.
           R
           ln -s /Applications "$OUT/Applications"
-          DMG="$HOME/Husham-Play-macos-${{ github.event.inputs.arch }}.dmg"
+          DMG="$HOME/Husham-Play-1.1-macos-${{ github.event.inputs.arch }}.dmg"
           hdiutil create -volname "Husham Play" -srcfolder "$OUT" -ov -format UDZO "$DMG"
           ls -la "$DMG"
           echo "file=$DMG" >> $GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Husham-Play-macos-${{ github.event.inputs.arch }}
+          name: Husham-Play-1.1-macos-${{ github.event.inputs.arch }}
           path: ${{ steps.pkg.outputs.file }}
 
       - name: Publish release
         if: github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: macos-${{ github.event.inputs.arch }}-${{ github.run_number }}
-          name: "Husham Play — macOS ${{ github.event.inputs.arch }} — Build #${{ github.run_number }}"
+          tag_name: v1.1-macos-${{ github.event.inputs.arch }}-${{ github.run_number }}
+          name: "Husham Play 1.1 — macOS ${{ github.event.inputs.arch }} — Build #${{ github.run_number }}"
           body: |
-            ## Husham Play for macOS (${{ github.event.inputs.arch }}, unsigned)
+            ## Husham Play 1.1 for macOS (${{ github.event.inputs.arch }}, unsigned)
             Open the dmg, drag Husham Play to Applications, then right-click → Open the first time (it isn't notarised).
 
+            Pre-configured with legal official add-ons, IPTV Simple Client (no playlist), Husham companion add-on and Husham Play skin. Provides no content.
+
             Based on open-source software licensed GPL-2.0-or-later. Source: this repository and upstream [xbmc/xbmc](https://github.com/xbmc/xbmc) (`${{ github.event.inputs.kodi_tag }}`).
-            Husham Play is not affiliated with or endorsed by the XBMC Foundation.
+            Husham Play is not affiliated with or endorsed by the XBMC Foundation / Kodi Foundation.
           files: ${{ steps.pkg.outputs.file }}
