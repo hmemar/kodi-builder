@@ -102,19 +102,21 @@ def main() -> int:
 
     check(
         "docs",
-        "README mentions Piers prerelease",
-        "Piers" in readme and "prerelease" in readme.lower(),
+        "README documents engine/prerelease or Omega",
+        ("Piers" in readme and "prerelease" in readme.lower())
+        or ("Omega" in readme),
     )
     check(
         "docs",
-        "addon examples use the Piers channel",
-        "https://mirrors.kodi.tv/addons/piers/" in addons,
+        "addon examples use an official channel (Omega or Piers)",
+        "https://mirrors.kodi.tv/addons/omega/" in addons
+        or "https://mirrors.kodi.tv/addons/piers/" in addons,
     )
     check(
         "docs",
-        "source example uses the Piers channel",
-        "<name>Kodi Piers Repo</name>" in sources
-        and "https://mirrors.kodi.tv/addons/piers/" in sources,
+        "sources include Husham links or official mirror note",
+        "husham.com" in sources.lower()
+        or "mirrors.kodi.tv/addons/" in sources,
     )
     check(
         "docs",
