@@ -27,7 +27,10 @@ COLORS = {
 
 
 def _log(msg: str) -> None:
-    print(msg, flush=True)
+    try:
+        print(msg, flush=True)
+    except UnicodeEncodeError:
+        print(msg.encode("ascii", "replace").decode("ascii"), flush=True)
 
 def _ensure_asset(cfg: str, name: str) -> str:
     """Return path to asset, decoding .b64 sibling if needed."""
