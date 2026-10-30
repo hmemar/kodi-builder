@@ -321,6 +321,7 @@ jobs:
             \/\/ Copy bundled userdata config files to profile on first launch\\
             CUtil::CopyUserDataIfNeeded(\"special://masterprofile/\", \"advancedsettings.xml\");\\
             CUtil::CopyUserDataIfNeeded(\"special://masterprofile/\", \"sources.xml\");\\
+            CUtil::CopyUserDataIfNeeded(\"special://masterprofile/\", \"favourites.xml\");\\
             CUtil::CopyUserDataIfNeeded(\"special://masterprofile/\", \"guisettings.xml\");" "$PLATFORM_CPP"
             echo "✅ Patched PlatformAndroid.cpp with CopyUserDataIfNeeded calls"
           else
@@ -427,98 +428,39 @@ jobs:
 
       - name: Stage pre-installed addons
         run: |
-          ADDONS_FILE="${{ github.workspace }}/kodi-config/addons.txt"
-          if [ ! -f "$ADDONS_FILE" ]; then
-            echo "ℹ️ No addons.txt found — skipping"
-            exit 0
-          fi
-          COUNT=0
-          ADDON_STAGE=~/staged-addons
-          mkdir -p "$ADDON_STAGE"
-          while IFS= read -r url || [ -n "$url" ]; do
-            url="$(echo "$url" | xargs)"
-            [ -z "$url" ] || [[ "$url" == \#* ]] && continue
-            fname=$(basename "$url")
-            echo "  ⬇️ $fname from $url"
-            if curl -L --retry 3 --retry-delay 5 \
-                 -H "User-Agent: Mozilla/5.0 (Linux; Android) Kodi" \
-                 -o "/tmp/$fname" "$url" 2>&1; then
-              if [ -f "/tmp/$fname" ] && file "/tmp/$fname" | grep -q "Zip"; then
-                unzip -o -q "/tmp/$fname" -d "$ADDON_STAGE/" 2>/dev/null || true
-                echo "  ✅ Extracted $fname"
-              else
-                echo "  ⚠️ Downloaded file is not a valid zip: /tmp/$fname"
-                file "/tmp/$fname" 2>/dev/null || true
-              fi
-              rm -f "/tmp/$fname"
-              COUNT=$((COUNT+1))
-            else
-              echo "  ❌ Failed to download: $url"
-            fi
-          done < "$ADDONS_FILE"
-          echo "Staged addon directories:"
-          ls -la "$ADDON_STAGE/" 2>/dev/null || echo "  (empty)"
-          echo "✅ $COUNT addon(s) staged in $ADDON_STAGE"
+          set -euo pipefail
+          ABI="${{ steps.abi.outputs.value }}"
+          case "$ABI" in
+            arm64-v8a) PLATFORM=android-aarch64 ;;
+            armeabi-v7a) PLATFORM=android-armv7 ;;
+            x86_64) PLATFORM=android-x86_64 ;;
+            *) echo "Unsupported ABI $ABI"; exit 1 ;;
+          esac
+          python3 scripts/stage-addons.py ~/kodi "${{ github.workspace }}/kodi-config" "$PLATFORM"
+          # Keep staged-addons mirror for later PREFIX injection
+          mkdir -p ~/staged-addons
+          while IFS= read -r line; do
+            aid=$(echo "$line" | sed -n 's|.*/addons/\([^/]*\)/\*.*|\1|p')
+            [ -n "$aid" ] && [ -d ~/kodi/addons/"$aid" ] && cp -a ~/kodi/addons/"$aid" ~/staged-addons/ || true
+          done < ~/kodi/cmake/installdata/common/addons.txt || true
+          # Also copy all non-core staged custom addons by comparing to bundled list
+          for d in youtube archive radiobrowser soundcloud podcasts inputstreamhelper requests xmltodict opensubtitles openmeteo husham iptvsimple adaptive ffmpegdirect rtmp; do
+            true
+          done
+          ls ~/kodi/addons | grep -E '^(plugin|script|service|weather|pvr|inputstream)\.' || true
 
-          # --- Integrate staged addons into the Kodi source tree ---
-          # Three things must happen BEFORE cmake runs for addons to be
-          # included in the APK:
-          #
-          # 1. Addon files must be in ~/kodi/addons/<addon_id>/
-          # 2. The addon must be listed in cmake/installdata/common/addons.txt
-          #    (cmake only copies explicitly listed addon directories into the
-          #    build tree — there is NO wildcard addons/*)
-          # 3. The addon must be registered in system/addon-manifest.xml
-          #    (Kodi ignores addon files not listed in the manifest)
+      - name: Brand Husham Play skin (Estuary fork)
+        run: |
+          set -euo pipefail
+          python3 scripts/brand-skin.py ~/kodi "${{ github.workspace }}/kodi-config"
 
-          MANIFEST=~/kodi/system/addon-manifest.xml
-          INSTALL_ADDONS=~/kodi/cmake/installdata/common/addons.txt
-
-          if [ -d "$ADDON_STAGE" ]; then
-            for addon_dir in "$ADDON_STAGE"/*/; do
-              [ -d "$addon_dir" ] || continue
-              addon_id=$(basename "$addon_dir")
-              echo ""
-              echo "  🔧 Integrating addon: $addon_id"
-
-              # 1. Copy addon files into source tree
-              cp -a "$addon_dir" ~/kodi/addons/
-              echo "    ✅ Copied to ~/kodi/addons/$addon_id/"
-
-              # 2. Add to cmake install data list
-              if [ -f "$INSTALL_ADDONS" ]; then
-                addon_entry="addons/${addon_id}/*"
-                if ! grep -qF "$addon_entry" "$INSTALL_ADDONS"; then
-                  echo "$addon_entry" >> "$INSTALL_ADDONS"
-                  echo "    ✅ Added to cmake installdata/common/addons.txt"
-                else
-                  echo "    ℹ️ Already in cmake addons.txt"
-                fi
-              fi
-
-              # 3. Register in addon-manifest.xml
-              if [ -f "$MANIFEST" ]; then
-                if ! grep -q "<addon>${addon_id}</addon>" "$MANIFEST"; then
-                  sed -i "s|</addons>|  <addon>${addon_id}</addon>\n</addons>|" "$MANIFEST"
-                  echo "    ✅ Registered in addon-manifest.xml"
-                else
-                  echo "    ℹ️ Already in addon-manifest.xml"
-                fi
-              fi
-            done
-
-            echo ""
-            echo "--- Verification ---"
-            echo "addon-manifest.xml tail:"
-            tail -5 "$MANIFEST" 2>/dev/null
-            echo "addons.txt tail:"
-            tail -5 "$INSTALL_ADDONS" 2>/dev/null
-            echo "Source addons/ (custom):"
-            for addon_dir in "$ADDON_STAGE"/*/; do
-              [ -d "$addon_dir" ] || continue
-              addon_id=$(basename "$addon_dir")
-              ls -d ~/kodi/addons/"$addon_id" 2>/dev/null && echo "  ✅ $addon_id present"
-            done
+      - name: Bake in favourites.xml
+        run: |
+          SRC="${{ github.workspace }}/kodi-config/favourites.xml"
+          if [ -f "$SRC" ]; then
+            mkdir -p ~/kodi/userdata
+            cp "$SRC" ~/kodi/userdata/favourites.xml
+            echo "✅ favourites.xml baked into userdata/"
           fi
 
       - name: Bake in advancedsettings.xml
@@ -563,12 +505,9 @@ jobs:
               # We use a targeted sed that only changes <default> within the
               # unknownsources setting block.
               sed -i '/<setting id="addons.unknownsources"/,/<\/setting>/ s|<default>false</default>|<default>true</default>|' "$SETTINGS_XML"
-              # Also change addons.updatemode from 0 (OFFICIAL_ONLY) to 1 (ANY_REPOSITORY)
-              # so that addons from third-party repos can receive updates.
-              sed -i '/<setting id="addons.updatemode"/,/<\/setting>/ s|<default>0</default>|<default>1</default>|' "$SETTINGS_XML"
               echo "Verification:"
-              grep -A 5 'addons.unknownsources\|addons.updatemode' "$SETTINGS_XML" | head -16
-              echo "✅ Unknown sources: ENABLED + Update mode: ANY_REPOSITORY"
+              grep -A 5 'addons.unknownsources' "$SETTINGS_XML" | head -10
+              echo "✅ Unknown sources: ENABLED (official repo update mode unchanged)"
             else
               echo "⚠️ settings.xml not found at $SETTINGS_XML"
             fi
@@ -1112,8 +1051,7 @@ jobs:
             # Strip any .apk extension the user may have included, then re-add it
             SAFE_NAME=$(echo "$CUSTOM" | sed 's/\.apk$//i' | tr ' ' '_')
           else
-            SAFE_NAME=$(echo "$APP" | tr ' ' '_')
-            SAFE_NAME="${SAFE_NAME}-${BRANCH}-${ABI}"
+            SAFE_NAME="Husham-Play-1.1-android-${ABI}"
           fi
 
           OUT_NAME="${SAFE_NAME}.apk"
@@ -1146,8 +1084,8 @@ jobs:
         if: github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: build-${{ github.run_number }}
-          name: "${{ github.event.inputs.app_name }} — Build #${{ github.run_number }}"
+          tag_name: v1.1-android-${{ steps.abi.outputs.value }}-${{ github.run_number }}
+          name: "Husham Play 1.1 — Android ${{ steps.abi.outputs.value }} — Build #${{ github.run_number }}"
           body: |
             ## ${{ github.event.inputs.app_name }} APK
 
