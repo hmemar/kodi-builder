@@ -48,7 +48,7 @@ def fork_estuary(src: str) -> str:
     if os.path.isdir(dest):
         shutil.rmtree(dest)
     shutil.copytree(estuary, dest)
-    _log(f"copied Estuary → {SKIN_ID}")
+    _log(f"copied Estuary -> {SKIN_ID}")
     return dest
 
 
@@ -65,7 +65,7 @@ def rewrite_addon_xml(skin_dir: str) -> None:
     # Summaries: replace default-skin claims lightly in en_GB if present
     text = re.sub(
         r'(<summary lang="en_GB">)[^<]+',
-        rf'\1{SKIN_NAME} skin — based on Estuary (GPL / CC BY-SA). Not affiliated with the Kodi Foundation.',
+        rf'\1{SKIN_NAME} skin - based on Estuary (GPL / CC BY-SA). Not affiliated with the Kodi Foundation.',
         text,
         count=1,
     )
@@ -73,7 +73,7 @@ def rewrite_addon_xml(skin_dir: str) -> None:
     if "Estuary" not in text.split("<license>")[1].split("</license>")[0] if "<license>" in text else "":
         text = text.replace(
             "<license>CC BY-SA 4.0, GNU GENERAL PUBLIC LICENSE Version 2.0</license>",
-            "<license>CC BY-SA 4.0, GNU GENERAL PUBLIC LICENSE Version 2.0 — based on Estuary</license>",
+            "<license>CC BY-SA 4.0, GNU GENERAL PUBLIC LICENSE Version 2.0 - based on Estuary</license>",
         )
     open(path, "w", encoding="utf-8").write(text)
     _log("addon.xml rewritten")
@@ -173,11 +173,11 @@ def register_skin(src: str) -> None:
                 f"<default>{SKIN_ID}</default>",
             )
         open(settings, "w", encoding="utf-8").write(s2)
-        _log(f"default skin → {SKIN_ID}")
+        _log(f"default skin -> {SKIN_ID}")
 
 
 def add_home_wizard_tile_hint(skin_dir: str) -> None:
-    """Ensure favourites widget is emphasized — Estuary already shows Favourites on home.
+    """Ensure favourites widget is emphasized - Estuary already shows Favourites on home.
     Write a short skin-settings default file if present.
     """
     # Patch Includes_Home to add a dedicated 'Add your own content' button near power/widgets if feasible.
