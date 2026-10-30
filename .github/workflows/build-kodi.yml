@@ -877,6 +877,8 @@ jobs:
             [ -f "$ADV_SRC" ] && cp "$ADV_SRC" "$SHARE_DIR/userdata/advancedsettings.xml" && echo "✅ Injected advancedsettings.xml into PREFIX share"
             [ -f "$SRC_SRC" ] && cp "$SRC_SRC" "$SHARE_DIR/userdata/sources.xml" && echo "✅ Injected sources.xml into PREFIX share"
             [ -f "$GUI_SRC" ] && cp "$GUI_SRC" "$SHARE_DIR/userdata/guisettings.xml" && echo "✅ Injected custom guisettings.xml into PREFIX share"
+            FAV_SRC="${{ github.workspace }}/kodi-config/favourites.xml"
+            [ -f "$FAV_SRC" ] && cp "$FAV_SRC" "$SHARE_DIR/userdata/favourites.xml" && echo "✅ Injected favourites.xml into PREFIX share"
             if [ -d "$ADDONS_STAGED" ] && [ "$(ls -A "$ADDONS_STAGED" 2>/dev/null)" ]; then
               mkdir -p "$SHARE_DIR/addons"
               cp -a "$ADDONS_STAGED/." "$SHARE_DIR/addons/"
@@ -956,6 +958,31 @@ jobs:
               fi
 
               echo "✅ Injected staged addons into packaging assets"
+              NEEDS_REPACK=true
+
+              # Binary add-on .so files cannot live in assets/ on Android (aapt/gradle
+              # drop them; Kodi's make apk also deletes assets/**/*.so). Copy them into
+              # the ABI jni lib folders so they ship in lib/<abi>/ beside libkodi.so.
+              ABI="${{ steps.abi.outputs.value }}"
+              for LIB_DIR in \
+                  "$PACKAGING_DIR/xbmc/lib/$ABI" \
+                  "$PACKAGING_DIR/xbmc/src/main/jniLibs/$ABI" \
+                  "$PACKAGING_DIR/xbmc/obj/local/$ABI"; do
+                mkdir -p "$LIB_DIR"
+                find "$ADDONS_STAGED" -type f -name '*.so' -exec cp -fp {} "$LIB_DIR/" \;
+              done
+              echo "Native libs from staged binary add-ons:"
+              find "$PACKAGING_DIR/xbmc/lib/$ABI" -maxdepth 1 -name 'libpvr*.so' -o -name 'libinputstream*.so' 2>/dev/null | head -20 || true
+              # Keep assets add-on trees but remove .so there (jni copy is the real one)
+              find "$ASSETS_DIR/addons" -type f -name '*.so' -delete 2>/dev/null || true
+            fi
+
+            # favourites.xml for home wizard tile
+            FAV_SRC="${{ github.workspace }}/kodi-config/favourites.xml"
+            if [ -f "$FAV_SRC" ]; then
+              mkdir -p "$ASSETS_DIR/userdata"
+              cp -f "$FAV_SRC" "$ASSETS_DIR/userdata/favourites.xml"
+              echo "✅ Injected favourites.xml into packaging assets"
               NEEDS_REPACK=true
             fi
 
