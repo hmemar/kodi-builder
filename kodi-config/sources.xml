@@ -1,65 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  sources.xml
-  Pre-configure media sources AND File Manager URL sources so they appear on first launch.
-
-  Edit this file directly in GitHub (click the pencil icon), then trigger a new build.
-  Full reference: https://kodi.wiki/view/Sources.xml
+  Husham Play 1.1 sources.xml — File Manager shortcuts only.
+  No media playlists or IPTV providers are bundled.
 -->
 <sources>
-  <!-- Optional addon repo example (disabled so no upstream branding shows in-app):
-    <source>
-      <name>Kodi Piers Repo</name>
-      <path pathversion="1">https://mirrors.kodi.tv/addons/piers/</path>
-    </source>
-  -->
-
   <programs>
     <default pathversion="1"></default>
   </programs>
-
-  <!-- ── VIDEO SOURCES ─────────────────────────────────────────────────── -->
   <video>
     <default pathversion="1"></default>
   </video>
-
-  <!-- ── MUSIC SOURCES ─────────────────────────────────────────────────── -->
   <music>
     <default pathversion="1"></default>
   </music>
-
   <pictures>
     <default pathversion="1"></default>
   </pictures>
-
-  <!-- ── FILE MANAGER SOURCES ──────────────────────────────────────────── -->
   <files>
     <default pathversion="1"></default>
-
     <source>
       <name>Husham.com</name>
-      <path pathversion="1">https://husham.com/</path>
+      <path pathversion="1">https://www.husham.com/</path>
       <allowsharing>true</allowsharing>
     </source>
-
     <source>
       <name>Husham Forum</name>
       <path pathversion="1">https://forum.husham.com/</path>
       <allowsharing>true</allowsharing>
     </source>
-
     <source>
       <name>Husham Speed Test</name>
       <path pathversion="1">https://speedtest.husham.com/</path>
       <allowsharing>true</allowsharing>
     </source>
-
     <source>
       <name>YouTube - Dr Husham Memar</name>
       <path pathversion="1">https://www.youtube.com/@husham122</path>
       <allowsharing>true</allowsharing>
     </source>
-
   </files>
-
 </sources>
