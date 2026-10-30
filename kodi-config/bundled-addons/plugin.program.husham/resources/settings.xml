@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+  <category label="General">
+    <setting id="first_run_done" type="bool" label="First-run wizard completed" default="false" visible="false"/>
+    <setting id="wizard_skipped" type="bool" label="Wizard skipped" default="false" visible="false"/>
+  </category>
+</settings>
