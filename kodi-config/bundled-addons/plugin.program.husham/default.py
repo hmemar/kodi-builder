@@ -14,9 +14,8 @@ ADDON = xbmcaddon.Addon()
 HANDLE = int(sys.argv[1]) if len(sys.argv) > 1 else -1
 BASE = sys.argv[0] if sys.argv else 'plugin://plugin.program.husham/'
 
-# TikTok: not listed on husham.com footer/site links as of 2026-10-30.
-# PLACEHOLDER — replace once Husham confirms the profile URL.
-TIKTOK_URL = None
+# TikTok profile (confirmed).
+TIKTOK_URL = 'https://www.tiktok.com/@husham.memar' 
 
 STREAMING_SERVICES = [
     # label, website, android package, play store id (usually same as package)
@@ -102,8 +101,8 @@ def list_root():
              plot='Husham speed test')
     add_item('Check for updates', build_url({'action': 'open', 'url': 'https://www.husham.com/husham-media/'}),
              plot='Husham Play download page')
-    add_item('TikTok (link pending)', build_url({'action': 'tiktok_placeholder'}),
-             plot='TikTok profile URL was not found on husham.com — awaiting confirmation.')
+    add_item('TikTok: @husham.memar', build_url({'action': 'open', 'url': TIKTOK_URL}),
+             plot='Open TikTok profile @husham.memar in the system browser.')
     add_item('VPN offers', build_url({'action': 'vpn_menu'}), is_folder=True,
              plot='Popular VPN offers (affiliate links)')
     add_item('Backup my settings', build_url({'action': 'backup'}),
@@ -323,13 +322,6 @@ def main():
             'Affiliate disclosure',
             'Some VPN links are affiliate links. Husham Play / husham.com may earn a commission '
             'if you buy through them, at no extra cost to you.',
-        )
-        return
-    if action == 'tiktok_placeholder':
-        xbmcgui.Dialog().ok(
-            'TikTok (pending)',
-            'No TikTok profile URL was found in the husham.com footer or site links '
-            '(checked 2026-10-30).\n\nPlaceholder left for Husham to confirm.',
         )
         return
     if action == 'backup':

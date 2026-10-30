@@ -2,6 +2,7 @@
 <favourites>
     <favourite name="Add your own content" thumb="special://xbmc/addons/plugin.program.husham/icon.png">RunPlugin(plugin://plugin.program.husham/?action=wizard)</favourite>
     <favourite name="YouTube — Husham" thumb="special://xbmc/addons/plugin.video.youtube/resources/media/icon.png">ActivateWindow(10025,"plugin://plugin.video.youtube/channel/@husham122/",return)</favourite>
+    <favourite name="TikTok: @husham.memar" thumb="special://xbmc/addons/plugin.program.husham/icon.png">RunPlugin(plugin://plugin.program.husham/?action=open&amp;url=https%3A%2F%2Fwww.tiktok.com%2F%40husham.memar)</favourite>
     <favourite name="Husham" thumb="special://xbmc/addons/plugin.program.husham/icon.png">ActivateWindow(10001,"plugin://plugin.program.husham/",return)</favourite>
     <favourite name="husham.com" thumb="special://xbmc/addons/plugin.program.husham/icon.png">RunPlugin(plugin://plugin.program.husham/?action=open&url=https%3A%2F%2Fwww.husham.com%2F)</favourite>
 </favourites>
