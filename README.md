@@ -1,39 +1,32 @@
-# Husham Play - Custom Kodi Fork Builder
+# Husham Play — custom media player builder
 
-This is a customized fork of the Kodi Android APK Builder for **Husham Play** by Dr Husham Memar.
+**Husham Play 1.1** is a free, international media player by Dr Husham Memar.
 
-It is based on the open-source Kodi media center software. Do not use the name "Kodi" or official logos in distribution.
+It is based on the open-source Kodi project. Do not use the name "Kodi" or official Kodi logos in distribution marketing. Husham Play is **not affiliated with or endorsed by** the Kodi Foundation / XBMC Foundation.
 
-### Build your custom APK
+Package ID (Android): `com.husham.media` (unchanged from the earlier Husham Media name so installs update in place). Unrelated to the paid HushPlay smart-TV app.
 
-1. Go to the **Actions** tab and enable workflows if needed.
-2. Run the **Build Kodi APK** workflow.
-3. Recommended settings:
-   - App display name: **Husham Play**
-   - Package ID: **com.husham.media**
-   - Pre-enable Unknown sources: true
-   - Publish as Release: true
+## What 1.1 includes
 
-The build includes:
-- Pre-installed YouTube addon (easy access to @husham122)
-- File Manager sources for husham.com, forum.husham.com, speedtest.husham.com, and the YouTube channel
+- Branding: Husham Play icon, splash, and **skin.husham.play** (Estuary fork, GPL / CC BY-SA — Estuary credit retained)
+- **PVR IPTV Simple Client** pre-installed with **no playlist** (add your own legal M3U / Xtream)
+- Official international add-ons only (YouTube, Internet Archive, Radio Browser, SoundCloud, Podcasts, OpenSubtitles.com, Open-Meteo weather, InputStream Helper + Adaptive/FFmpegDirect/RTMP where platform binaries exist)
+- **plugin.program.husham**: first-run “Add your own content” wizard, links, VPN offers (affiliate disclosure), backup/restore, privacy note, update check, official streaming website/app launchers (text names only)
+- International defaults (no forced UK language/region/timezone)
+- Favourites home tiles: Add your own content, YouTube, Husham, husham.com
 
-Upload a custom `icon.png` and `splash.png` to `kodi-config/` for full branding.
+See [THIRD-PARTY-ADDONS.md](THIRD-PARTY-ADDONS.md) for licences and sources.
 
-Download the APK from Releases after the build completes, then host it on your website.
+## Build
 
----
+1. Enable Actions on this repository if needed.
+2. Run the platform workflow you need (`build-kodi.yml` Android, `build-windows.yml`, `build-macos.yml`, `build-linux.yml`).
+3. Recommended Android inputs: App name **Husham Play**, package **com.husham.media**, Unknown sources true, Publish release true.
 
-*Based on the open-source Kodi project. Source code available in this repository.*
+Engine: upstream Omega (21.3).
 
-Husham Play was previously called Husham Media (package ID `com.husham.media` is unchanged, so existing installs update in place). It is a free app and is unrelated to the paid HushPlay smart TV player.
+## Licence
 
-## Engine
+GPL-2.0-or-later, matching upstream [xbmc/xbmc](https://github.com/xbmc/xbmc). Bundled third-party add-ons keep their own licences (see THIRD-PARTY-ADDONS.md). Skin based on Estuary (CC BY-SA 4.0 / GPL-2.0).
 
-Built from the stable upstream Omega (21.x) branch. Piers (Kodi 22, prerelease) is available but currently fails upstream.
-
-## License
-
-This project is licensed under GPL-2.0-or-later, matching upstream [xbmc/xbmc](https://github.com/xbmc/xbmc).
-
-Husham Play is not affiliated with or endorsed by the XBMC Foundation. Kodi is a trademark of the XBMC Foundation.
+Husham Play provides **no** films, TV, sports or IPTV playlists. Only use services and media you have the right to access.
