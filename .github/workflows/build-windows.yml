@@ -79,7 +79,7 @@ jobs:
           }
           New-Item -ItemType Directory "$app\portable_data" -Force | Out-Null
           @"
-          Husham Play 1.1 for Windows x64 (portable)
+          Husham Play 1.2 for Windows x64 (portable)
           Unzip anywhere and run "Husham Play.exe". Settings live in portable_data\ when started with -p,
           e.g. create a shortcut: "Husham Play.exe" -p
           Based on open-source software licensed GPL-2.0-or-later.
@@ -90,24 +90,24 @@ jobs:
           Set-Content "$app\Husham Play (portable).bat" '@start "" "%~dp0Husham Play.exe" -p'
           $parent = Split-Path $app
           Rename-Item $app "Husham Play"
-          $zip = "C:\Husham-Play-1.1-windows-x64-portable.zip"
+          $zip = "C:\Husham-Play-1.2-windows-x64-portable.zip"
           Compress-Archive -Path "$parent\Husham Play" -DestinationPath $zip
           Get-Item $zip | Format-List Name,Length
           "file=$zip" >> $env:GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Husham-Play-1.1-windows-x64
+          name: Husham-Play-1.2-windows-x64
           path: ${{ steps.pkg.outputs.file }}
 
       - name: Publish release
         if: github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1-windows-${{ github.run_number }}
-          name: "Husham Play 1.1 — Windows x64 — Build #${{ github.run_number }}"
+          tag_name: v1.2-windows-${{ github.run_number }}
+          name: "Husham Play 1.2 — Windows x64 — Build #${{ github.run_number }}"
           body: |
-            ## Husham Play 1.1 for Windows (x64, portable)
+            ## Husham Play 1.2 for Windows (x64, portable)
             Unzip and run `Husham Play.exe` (or `Husham Play (portable).bat` to keep settings in the folder). Unsigned, so SmartScreen will grumble: More info → Run anyway.
 
             Pre-configured with legal official add-ons, IPTV Simple Client (no playlist), Husham companion add-on and Husham Play skin. Provides no content.

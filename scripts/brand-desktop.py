@@ -90,7 +90,19 @@ if os.path.isfile(app):
         open(app, "w", encoding="utf-8").write(a)
         log("patched Application.cpp")
 
-# 3. unknown sources default on
+# 3. Native display name (window titles / about). Keep version.txt APP_NAME as Kodi
+# so cmake APP_NAME_LC paths (libkodi / depends) stay valid.
+ci = os.path.join(src, "xbmc", "CompileInfo.cpp.in")
+if os.path.isfile(ci):
+    c = open(ci, encoding="utf-8").read()
+    c2 = c.replace('return "@APP_NAME@";', 'return "Husham Play";', 1)
+    if c2 != c:
+        open(ci, "w", encoding="utf-8").write(c2)
+        log("CompileInfo GetAppName -> Husham Play")
+    else:
+        log("CompileInfo GetAppName already patched or pattern missing")
+
+# 4. unknown sources default on
 st = os.path.join(src, "system", "settings", "settings.xml")
 if os.path.isfile(st):
     s = open(st, encoding="utf-8").read()
@@ -101,10 +113,10 @@ if os.path.isfile(st):
     )
     open(st, "w", encoding="utf-8").write(s)
 
-# 4. stage addons (python + binary + bundled)
+# 5. stage addons (python + binary + bundled)
 subprocess.check_call([sys.executable, os.path.join(here, "stage-addons.py"), src, cfg, platform])
 
-# 5. skin fork
+# 6. skin fork
 subprocess.check_call([sys.executable, os.path.join(here, "brand-skin.py"), src, cfg])
 
 log("branding done")

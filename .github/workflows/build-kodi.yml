@@ -334,11 +334,21 @@ jobs:
         run: |
           APP="${{ github.event.inputs.app_name }}"
           echo "🎨 Renaming app to: $APP"
-          find ~/kodi/tools/android/packaging -type f -name "*.xml" -o -name "*.gradle" | \
+          # Keep version.txt APP_NAME as Kodi so cmake APP_NAME_LC paths (libkodi.so) stay valid.
+          find ~/kodi/tools/android/packaging -type f \( -name "*.xml" -o -name "*.gradle" \) | \
             xargs sed -i "s|>Kodi<|>$APP<|g; s|\"Kodi\"|\"$APP\"|g" 2>/dev/null || true
-          # Launcher label comes from @APP_NAME@ in strings.xml.in (keep internal APP_NAME so lib names stay valid)
-          sed -i "s|@APP_NAME@|$APP|g" ~/kodi/tools/android/packaging/xbmc/strings.xml.in
-          grep -n app_name ~/kodi/tools/android/packaging/xbmc/strings.xml.in
+          # Launcher label + Splash permission dialog / "Starting …" and other packaging templates.
+          # Must run on SOURCE .in files before cmake configure_file substitutes @APP_NAME@ from version.txt.
+          find ~/kodi/tools/android/packaging -type f \( -name '*.xml.in' -o -name '*.java.in' \) -print0 | \
+            xargs -0 sed -i "s|@APP_NAME@|$APP|g"
+          # Native GetAppName() used for window titles / about text
+          sed -i 's|return "@APP_NAME@";|return "'"$APP"'";|' ~/kodi/xbmc/CompileInfo.cpp.in
+          echo "---- strings.xml.in ----"
+          grep -n app_name ~/kodi/tools/android/packaging/xbmc/strings.xml.in || true
+          echo "---- Splash.java.in user-visible ----"
+          grep -n 'requires access\|Starting ' ~/kodi/tools/android/packaging/xbmc/src/Splash.java.in || true
+          echo "---- CompileInfo GetAppName ----"
+          grep -n -A2 'GetAppName' ~/kodi/xbmc/CompileInfo.cpp.in | head -20 || true
 
       - name: Apply custom package ID
         if: github.event.inputs.package_id != 'org.xbmc.kodi'
@@ -1173,7 +1183,7 @@ jobs:
             # Strip any .apk extension the user may have included, then re-add it
             SAFE_NAME=$(echo "$CUSTOM" | sed 's/\.apk$//i' | tr ' ' '_')
           else
-            SAFE_NAME="Husham-Play-1.1-android-${ABI}"
+            SAFE_NAME="Husham-Play-1.2-android-${ABI}"
           fi
 
           OUT_NAME="${SAFE_NAME}.apk"
@@ -1206,8 +1216,8 @@ jobs:
         if: github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v1.1-android-${{ steps.abi.outputs.value }}-${{ github.run_number }}
-          name: "Husham Play 1.1 — Android ${{ steps.abi.outputs.value }} — Build #${{ github.run_number }}"
+          tag_name: v1.2-android-${{ steps.abi.outputs.value }}-${{ github.run_number }}
+          name: "Husham Play 1.2 — Android ${{ steps.abi.outputs.value }} — Build #${{ github.run_number }}"
           body: |
             ## ${{ github.event.inputs.app_name }} APK
 

@@ -77,9 +77,9 @@ def add_item(label, url=None, is_folder=False, plot='', art=None):
 
 def list_root():
     add_item(
-        'Add your own content…',
+        'Husham Play setup…',
         build_url({'action': 'wizard'}),
-        plot='Set up IPTV (Xtream or M3U) or add your own video folders. Husham Play ships with no content.',
+        plot='Three simple options: Xtream login, M3U playlist link, or your own video folders. Husham Play ships with no content.',
     )
     add_item(
         'Official streaming services',
@@ -255,7 +255,7 @@ def do_update_check():
     import json
     import urllib.request
     dialog = xbmcgui.Dialog()
-    local = '1.1'
+    local = '1.2'
     try:
         ver_file = xbmcaddon.Addon().getAddonInfo('path').rstrip('/\\') + '/../../../userdata/../'
     except Exception:
@@ -264,7 +264,7 @@ def do_update_check():
     try:
         req = urllib.request.Request(
             'https://api.github.com/repos/hmemar/kodi-builder/releases/latest',
-            headers={'User-Agent': 'HushamPlay/1.1', 'Accept': 'application/vnd.github+json'},
+            headers={'User-Agent': 'HushamPlay/1.2', 'Accept': 'application/vnd.github+json'},
         )
         with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode('utf-8'))
@@ -353,7 +353,7 @@ def main():
         return
     if action == 'about':
         xbmcgui.Dialog().ok(
-            'Husham Play 1.1',
+            'Husham Play 1.2',
             'Free media player by Dr Husham Memar.\n'
             'Based on the open-source Kodi project (GPL-2.0-or-later).\n'
             'Not affiliated with or endorsed by the Kodi Foundation / XBMC Foundation.\n'
