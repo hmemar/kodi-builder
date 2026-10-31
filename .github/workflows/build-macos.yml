@@ -103,7 +103,7 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.husham.media" "$PL" || true
           codesign --force --deep -s - "$OUT/Husham Play.app" || true
           cat > "$OUT/README-HUSHAM-PLAY.txt" <<'R'
-          Husham Play 1.1 for macOS (unsigned)
+          Husham Play 1.3 for macOS (unsigned)
           Drag "Husham Play" to Applications. First launch: right-click > Open, or run
             xattr -dr com.apple.quarantine "/Applications/Husham Play.app"
           Based on open-source software licensed GPL-2.0-or-later.
@@ -112,24 +112,24 @@ jobs:
           Husham Play provides no content — only use services and media you have the right to access.
           R
           ln -s /Applications "$OUT/Applications"
-          DMG="$HOME/Husham-Play-1.1-macos-${{ github.event.inputs.arch }}.dmg"
+          DMG="$HOME/Husham-Play-1.3-macos-${{ github.event.inputs.arch }}.dmg"
           hdiutil create -volname "Husham Play" -srcfolder "$OUT" -ov -format UDZO "$DMG"
           ls -la "$DMG"
           echo "file=$DMG" >> $GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Husham-Play-1.1-macos-${{ github.event.inputs.arch }}
+          name: Husham-Play-1.3-macos-${{ github.event.inputs.arch }}
           path: ${{ steps.pkg.outputs.file }}
 
       - name: Publish release
         if: github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1-macos-${{ github.event.inputs.arch }}-${{ github.run_number }}
-          name: "Husham Play 1.1 — macOS ${{ github.event.inputs.arch }} — Build #${{ github.run_number }}"
+          tag_name: v1.3-macos-${{ github.event.inputs.arch }}-${{ github.run_number }}
+          name: "Husham Play 1.3 — macOS ${{ github.event.inputs.arch }} — Build #${{ github.run_number }}"
           body: |
-            ## Husham Play 1.1 for macOS (${{ github.event.inputs.arch }}, unsigned)
+            ## Husham Play 1.3 for macOS (${{ github.event.inputs.arch }}, unsigned)
             Open the dmg, drag Husham Play to Applications, then right-click → Open the first time (it isn't notarised).
 
             Pre-configured with legal official add-ons, IPTV Simple Client (no playlist), Husham companion add-on and Husham Play skin. Provides no content.
