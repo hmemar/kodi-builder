@@ -119,4 +119,7 @@ subprocess.check_call([sys.executable, os.path.join(here, "stage-addons.py"), sr
 # 6. skin fork
 subprocess.check_call([sys.executable, os.path.join(here, "brand-skin.py"), src, cfg])
 
+# 7. UI string rebrand (language packs, skin/add-on strings) — keep legal Kodi credits
+subprocess.check_call([sys.executable, os.path.join(here, "rebrand-ui-strings.py"), src])
+
 log("branding done")
