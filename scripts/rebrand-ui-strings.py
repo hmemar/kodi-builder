@@ -208,11 +208,14 @@ def main() -> int:
                 xml_repl += r
                 xml_changed += c
 
-    print(
-        f"rebrand-ui-strings: scanned {po_files} strings.po ({po_changed} changed, ~{po_repl} Kodi→{DISPLAY}), "
-        f"{xml_files} addon.xml ({xml_changed} changed, ~{xml_repl} replacements)",
-        flush=True,
+    msg = (
+        f"rebrand-ui-strings: scanned {po_files} strings.po ({po_changed} changed, ~{po_repl} Kodi->{DISPLAY}), "
+        f"{xml_files} addon.xml ({xml_changed} changed, ~{xml_repl} replacements)"
     )
+    try:
+        print(msg, flush=True)
+    except UnicodeEncodeError:
+        print(msg.encode("ascii", "replace").decode("ascii"), flush=True)
     return 0
 
 
