@@ -89,9 +89,8 @@ def list_root():
     )
     add_item(
         'YouTube — @husham122',
-        'plugin://plugin.video.youtube/channel/@husham122/',
-        is_folder=True,
-        plot='Open Dr Husham Memar’s YouTube channel via the official YouTube add-on.',
+        build_url({'action': 'open', 'url': 'https://www.youtube.com/@husham122'}),
+        plot='Open Dr Husham Memar’s YouTube channel (@husham122) in the system browser.',
     )
     add_item('husham.com', build_url({'action': 'open', 'url': 'https://www.husham.com/'}),
              plot='Guides, news and articles')
@@ -255,7 +254,7 @@ def do_update_check():
     import json
     import urllib.request
     dialog = xbmcgui.Dialog()
-    local = '1.3'
+    local = '1.4'
     try:
         ver_file = xbmcaddon.Addon().getAddonInfo('path').rstrip('/\\') + '/../../../userdata/../'
     except Exception:
@@ -264,7 +263,7 @@ def do_update_check():
     try:
         req = urllib.request.Request(
             'https://api.github.com/repos/hmemar/kodi-builder/releases/latest',
-            headers={'User-Agent': 'HushamPlay/1.3', 'Accept': 'application/vnd.github+json'},
+            headers={'User-Agent': 'HushamPlay/1.4', 'Accept': 'application/vnd.github+json'},
         )
         with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode('utf-8'))
@@ -353,7 +352,7 @@ def main():
         return
     if action == 'about':
         xbmcgui.Dialog().ok(
-            'Husham Play 1.3',
+            'Husham Play 1.4',
             'Free media player by Dr Husham Memar.\n'
             'Based on the open-source Kodi project (GPL-2.0-or-later).\n'
             'Not affiliated with or endorsed by the Kodi Foundation / XBMC Foundation.\n'

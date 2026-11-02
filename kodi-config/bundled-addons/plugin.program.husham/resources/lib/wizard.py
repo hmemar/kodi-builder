@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.parse
+
 import xbmc
 import xbmcaddon
 import xbmcgui
@@ -15,22 +17,23 @@ NOTICE = (
     'Only use services and media you have the right to access.'
 )
 PVR_ID = 'pvr.iptvsimple'
+INPUTSTREAM_DEPS = (
+    'inputstream.ffmpegdirect',
+    'inputstream.adaptive',
+    'inputstream.rtmp',
+)
 
-# Big, plain-English choices shown on first run (and from Favourites).
 CHOICE_XTREAM = 0
 CHOICE_M3U = 1
 CHOICE_VIDEOS = 2
 CHOICE_SKIP = 3
 
+# Short labels only — Estuary's select dialog mangles multiline items.
 SETUP_CHOICES = [
-    'I have an Xtream login\n'
-    'Type the server, username and password your IPTV provider gave you.',
-    'I have a playlist (M3U) link\n'
-    'Paste the M3U URL you already have (TV guide URL is optional).',
-    'I want to play my own videos\n'
-    'Pick a folder on this device, a USB stick, or a network share.',
-    'Skip for now\n'
-    'You can open this setup again any time from Favourites.',
+    'I have an Xtream login',
+    'I have a playlist (M3U) link',
+    'I want to play my own videos',
+    'Skip for now',
 ]
 
 
@@ -43,15 +46,6 @@ def _ensure_dir(path):
         xbmcvfs.mkdirs(path)
 
 
-def _set_addon_setting(addon_id, key, value):
-    try:
-        xbmcaddon.Addon(addon_id).setSetting(key, str(value))
-        return True
-    except Exception as exc:  # noqa: BLE001
-        xbmc.log('Husham wizard: setSetting %s.%s failed: %s' % (addon_id, key, exc), xbmc.LOGWARNING)
-        return False
-
-
 def _enable_addon(addon_id):
     try:
         xbmc.executeJSONRPC(json.dumps({
@@ -62,40 +56,14 @@ def _enable_addon(addon_id):
         xbmc.log('Husham wizard: enable %s failed: %s' % (addon_id, exc), xbmc.LOGWARNING)
 
 
-def _write_iptv_instance(m3u_url, epg_url=''):
-    """Write IPTV Simple instance settings (Omega multi-instance style) and enable PVR."""
-    _enable_addon(PVR_ID)
-    # Global-ish settings used by older and newer IPTV Simple
-    _set_addon_setting(PVR_ID, 'm3uPathType', '1')  # remote URL
-    _set_addon_setting(PVR_ID, 'm3uUrl', m3u_url)
-    _set_addon_setting(PVR_ID, 'epgPathType', '1' if epg_url else '0')
-    if epg_url:
-        _set_addon_setting(PVR_ID, 'epgUrl', epg_url)
-    # Also write instance settings file used by IPTV Simple 20+/21+
-    inst_dir = _userdata('addon_data', PVR_ID)
-    _ensure_dir(inst_dir)
-    # Minimal instance XML — IPTV Simple reads instance-settings-N.xml
-    xml = [
-        '<?xml version=\'1.0\' encoding=\'UTF-8\'?>',
-        '<settings version="2">',
-        '    <setting id="m3uPathType">1</setting>',
-        '    <setting id="m3uUrl">%s</setting>' % _xml_escape(m3u_url),
-        '    <setting id="epgPathType">%s</setting>' % ('1' if epg_url else '0'),
-    ]
-    if epg_url:
-        xml.append('    <setting id="epgUrl">%s</setting>' % _xml_escape(epg_url))
-    xml.append('</settings>')
-    path = os.path.join(inst_dir, 'instance-settings-1.xml')
-    with xbmcvfs.File(path, 'w') as fh:
-        fh.write('\n'.join(xml) + '\n')
-    # Nudge PVR to reload
-    xbmc.executebuiltin('PVR.UpdateAndRecordings')
-    xbmcgui.Dialog().notification(
-        'Husham Play',
-        'Playlist saved. Open Live TV after a moment.',
-        xbmcgui.NOTIFICATION_INFO,
-        5000,
-    )
+def _disable_addon(addon_id):
+    try:
+        xbmc.executeJSONRPC(json.dumps({
+            'jsonrpc': '2.0', 'id': 1, 'method': 'Addons.SetAddonEnabled',
+            'params': {'addonid': addon_id, 'enabled': False},
+        }))
+    except Exception as exc:  # noqa: BLE001
+        xbmc.log('Husham wizard: disable %s failed: %s' % (addon_id, exc), xbmc.LOGWARNING)
 
 
 def _xml_escape(value):
@@ -104,6 +72,80 @@ def _xml_escape(value):
         .replace('<', '&lt;')
         .replace('>', '&gt;')
         .replace('"', '&quot;')
+    )
+
+
+def _write_text(path, text):
+    # xbmcvfs.File write expects str on Py3 Kodi
+    with xbmcvfs.File(path, 'w') as fh:
+        fh.write(text)
+
+
+def _write_iptv_instance(m3u_url, epg_url=''):
+    """Write IPTV Simple v21 instance-settings-1.xml and (re)start PVR cleanly.
+
+    Omega IPTV Simple is multi-instance: Addon.setSetting() hits obsolete
+    addon-level keys and does not configure the live instance. Settings must
+    live in userdata/addon_data/pvr.iptvsimple/instance-settings-1.xml.
+    """
+    # Stop PVR so the client reloads settings from disk.
+    try:
+        xbmc.executebuiltin('StopPVRManager')
+    except Exception:
+        pass
+    xbmc.sleep(800)
+
+    for dep in INPUTSTREAM_DEPS:
+        _enable_addon(dep)
+    _enable_addon(PVR_ID)
+
+    inst_dir = _userdata('addon_data', PVR_ID)
+    _ensure_dir(inst_dir)
+
+    # Settings version 2 — same shape the GUI writes for Omega.
+    pairs = [
+        ('m3uPathType', '1'),          # remote URL
+        ('m3uUrl', m3u_url),
+        ('m3uCache', 'true'),
+        ('startNum', '1'),
+        ('numberByOrder', 'false'),
+        ('m3uRefreshMode', '0'),
+        ('epgPathType', '1' if epg_url else '0'),
+    ]
+    if epg_url:
+        pairs.append(('epgUrl', epg_url))
+        pairs.append(('epgCache', 'true'))
+    # Avoid long connection-check stalls on bad networks
+    pairs.append(('connectionchecktimeout', '10'))
+    pairs.append(('connectioncheckinterval', '20'))
+
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>',
+        '<settings version="2">',
+    ]
+    for key, val in pairs:
+        lines.append('    <setting id="%s">%s</setting>' % (key, _xml_escape(val)))
+    lines.append('</settings>')
+    lines.append('')
+    inst_path = os.path.join(inst_dir, 'instance-settings-1.xml')
+    _write_text(inst_path, '\n'.join(lines))
+    xbmc.log('Husham wizard: wrote %s' % inst_path, xbmc.LOGINFO)
+
+    # Bounce the client so PVR manager reloads the instance file.
+    _disable_addon(PVR_ID)
+    xbmc.sleep(500)
+    _enable_addon(PVR_ID)
+    xbmc.sleep(500)
+    try:
+        xbmc.executebuiltin('StartPVRManager')
+    except Exception:
+        pass
+
+    xbmcgui.Dialog().notification(
+        'Husham Play',
+        'Playlist saved. Open Live TV after a moment.',
+        xbmcgui.NOTIFICATION_INFO,
+        5000,
     )
 
 
@@ -136,8 +178,10 @@ def wizard_xtream():
     if not password:
         return
     base = _normalize_xtream_server(server)
-    m3u = '%s/get.php?username=%s&password=%s&type=m3u_plus' % (base, username, password)
-    epg = '%s/xmltv.php?username=%s&password=%s' % (base, username, password)
+    user_q = urllib.parse.quote(username, safe='')
+    pass_q = urllib.parse.quote(password, safe='')
+    m3u = '%s/get.php?username=%s&password=%s&type=m3u_plus' % (base, user_q, pass_q)
+    epg = '%s/xmltv.php?username=%s&password=%s' % (base, user_q, pass_q)
     _write_iptv_instance(m3u, epg)
     dialog.ok(
         'Done',
@@ -237,7 +281,6 @@ def run_wizard(force=False):
         _mark_first_run_done(skipped=True)
         return
     else:
-        # User backed out of the list — treat like skip so we do not loop forever.
         _mark_first_run_done(skipped=True)
         return
     _mark_first_run_done(skipped=False)

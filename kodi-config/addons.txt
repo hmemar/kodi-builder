@@ -1,7 +1,8 @@
 # Husham Play 1.1 — official Omega add-ons (python / script). One ZIP URL per line.
 # Binary add-ons (PVR / InputStream) are listed in binary-addons.txt and resolved per platform.
 #
-https://mirrors.kodi.tv/addons/omega/plugin.video.youtube/plugin.video.youtube-7.4.4.zip
+# Removed in 1.4: YouTube Kodi add-on service errors without API keys; tile opens browser instead.
+#https://mirrors.kodi.tv/addons/omega/plugin.video.youtube/plugin.video.youtube-7.4.4.zip
 https://mirrors.kodi.tv/addons/omega/plugin.video.archive.org/plugin.video.archive.org-1.0.0.zip
 https://mirrors.kodi.tv/addons/omega/plugin.audio.radiobrowser/plugin.audio.radiobrowser-2.0.0.zip
 https://mirrors.kodi.tv/addons/omega/plugin.audio.soundcloud/plugin.audio.soundcloud-4.1.0.zip
