@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Replace user-visible 'Kodi' with 'Husham Play' in UI language / metadata files.
+"""Replace user-visible 'Kodi' with 'Husham Play' in UI language / metadata / skin XML.
 
 Usage: rebrand-ui-strings.py <kodi-src>
 
 Patches:
-  - all **/strings.po under the source tree (core, skins, add-ons)
-  - addon.xml / addon.xml.in summary/description/disclaimer/name text that mentions Kodi
+  - all **/strings.po (core, skins, add-ons)
+  - addon.xml / addon.xml.in summary/description/disclaimer/name
+  - skin and dialog XML label attributes / text that mention Kodi
 
-Keeps Kodi where credit / attribution / legal identity is required, e.g.:
-  Kodi Foundation, Team Kodi, Kodi Translation Team, open-source Kodi project,
-  kodi.tv / kodi.wiki / forum.kodi URLs, SPDX/copyright headers that name Team Kodi.
+Keeps Kodi for legal credits (Foundation, Team Kodi, Translation Team,
+open-source Kodi project, kodi.tv URLs, LICENSE files).
 
-Does NOT touch: LICENSE/COPYING files, C/C++/headers, JSON-RPC schemas, lib names,
+Does NOT touch: LICENSE/COPYING, C/C++/headers, JSON-RPC, lib names,
 package IDs, or binary add-on IDs.
 """
 from __future__ import annotations
@@ -22,17 +22,15 @@ import sys
 
 DISPLAY = "Husham Play"
 
-# Phrases that must keep the word Kodi (placeholders must not contain \bKodi\b).
 PROTECT = [
     ("Kodi Foundation", "\x00KF\x00"),
     ("Team Kodi", "\x00TK\x00"),
     ("Kodi Translation Team", "\x00KTT\x00"),
     ("open-source Kodi project", "\x00OSKP\x00"),
     ("open source Kodi project", "\x00OSKP2\x00"),
-    ("XBMC Foundation", "\x00XF\x00"),  # unrelated but leave intact near credits
+    ("XBMC Foundation", "\x00XF\x00"),
 ]
 
-# URL / host forms — protect before word replace.
 URL_PROTECT = [
     (re.compile(r"https?://[^\s\"<>]*kodi[^\s\"<>]*", re.I), "\x00URL%d\x00"),
     (re.compile(r"\b(?:forum\.)?kodi\.(?:tv|wiki)\b", re.I), "\x00HOST%d\x00"),
@@ -40,14 +38,7 @@ URL_PROTECT = [
 
 KODI_WORD = re.compile(r"\bKodi\b")
 KODI_POSSESSIVE = re.compile(r"\bKodi's\b")
-
-# Lines in .po / xml we rewrite.
-PO_LINE = re.compile(
-    r'^(\s*(?:msgid|msgstr|msgctxt)\s+|")(.*)$'
-)
-# Only rewrite msgid for English packs (source language shown as fallback).
 EN_LANG = re.compile(r"resource\.language\.en_[a-z]{2}", re.I)
-
 XML_TEXT_TAGS = ("summary", "description", "disclaimer", "name", "news")
 
 
@@ -83,23 +74,16 @@ def replace_visible_kodi(s: str) -> str:
 
 
 def patch_po(path: str) -> tuple[int, int]:
-    """Return (replacements, changed_flag)."""
     original = open(path, encoding="utf-8", errors="replace").read()
-    is_en = bool(EN_LANG.search(path.replace("\\", "/"))) or path.replace("\\", "/").endswith(
-        "/resource.language.en_gb/resources/strings.po"
-    )
-    # Also treat generic en_gb path under skins
+    is_en = bool(EN_LANG.search(path.replace("\\", "/")))
     if "/resource.language.en_" in path.replace("\\", "/"):
         is_en = True
 
     out: list[str] = []
-    replacements = 0
     in_msgid = False
     in_msgstr = False
 
     for line in original.splitlines(keepends=True):
-        raw = line
-        # Track which field we are in
         if line.startswith("msgid "):
             in_msgid, in_msgstr = True, False
         elif line.startswith("msgstr "):
@@ -114,25 +98,16 @@ def patch_po(path: str) -> tuple[int, int]:
             do = True
         elif is_en and in_msgid and (line.startswith("msgid ") or line.startswith('"')):
             do = True
-        # Developer comments that mention Kodi in help — optional polish
         elif line.startswith("#.") and KODI_WORD.search(line):
             do = True
 
         if do and (KODI_WORD.search(line) or KODI_POSSESSIVE.search(line)):
-            new = replace_visible_kodi(line)
-            if new != line:
-                replacements += len(KODI_WORD.findall(line)) + len(KODI_POSSESSIVE.findall(line))
-                # recount after protect is hard; just count word hits before
-                replacements = replacements  # noqa: keep simple
-                line = new
+            line = replace_visible_kodi(line)
         out.append(line)
 
     text = "".join(out)
-    # Recount properly
-    # Compare unprotected visible... simpler recount via before/after on msgstr only
     if text != original:
         open(path, "w", encoding="utf-8", newline="\n").write(text)
-        # Count remaining vs original for reporting
         before = len(KODI_WORD.findall(original)) + len(KODI_POSSESSIVE.findall(original))
         after = len(KODI_WORD.findall(text)) + len(KODI_POSSESSIVE.findall(text))
         return max(0, before - after), 1
@@ -156,12 +131,52 @@ def patch_addon_xml(path: str) -> tuple[int, int]:
             text,
             flags=re.I | re.S,
         )
-    # provider-name="Team Kodi" must stay — protected inside replace if we hit attributes
-    # Also rewrite plain >Kodi< label leftovers carefully
     if text != original:
         open(path, "w", encoding="utf-8", newline="\n").write(text)
         before = len(KODI_WORD.findall(original))
         after = len(KODI_WORD.findall(text))
+        return max(0, before - after), 1
+    return 0, 0
+
+
+def patch_gui_xml(path: str) -> tuple[int, int]:
+    original = open(path, encoding="utf-8", errors="replace").read()
+    if not (KODI_WORD.search(original) or KODI_POSSESSIVE.search(original)):
+        return 0, 0
+    text = original
+
+    def repl_attr(m: re.Match) -> str:
+        val = m.group(3)
+        if not (KODI_WORD.search(val) or KODI_POSSESSIVE.search(val)):
+            return m.group(0)
+        return m.group(1) + m.group(2) + replace_visible_kodi(val) + m.group(2)
+
+    for attr in ("label", "label2", "description", "value", "tooltip"):
+        text = re.sub(
+            rf'({attr}\s*=\s*)([\'"])(.*?)\2',
+            repl_attr,
+            text,
+            flags=re.I | re.S,
+        )
+
+    def repl_tag(m: re.Match) -> str:
+        inner = m.group(2)
+        if not (KODI_WORD.search(inner) or KODI_POSSESSIVE.search(inner)):
+            return m.group(0)
+        return m.group(1) + replace_visible_kodi(inner) + m.group(3)
+
+    for tag in ("label", "label2", "description"):
+        text = re.sub(
+            rf"(<{tag}\b[^>]*>)([^<]*)(</{tag}>)",
+            repl_tag,
+            text,
+            flags=re.I,
+        )
+
+    if text != original:
+        open(path, "w", encoding="utf-8", newline="\n").write(text)
+        before = len(KODI_WORD.findall(original)) + len(KODI_POSSESSIVE.findall(original))
+        after = len(KODI_WORD.findall(text)) + len(KODI_POSSESSIVE.findall(text))
         return max(0, before - after), 1
     return 0, 0
 
@@ -171,7 +186,7 @@ def should_skip(path: str) -> bool:
     base = os.path.basename(norm)
     if base in {"copying", "license", "license.txt", "license.md", "copying.txt", "gpl.txt"}:
         return True
-    if "/licenses/" in norm or norm.endswith(".md") and "license" in base:
+    if "/licenses/" in norm:
         return True
     return False
 
@@ -185,18 +200,16 @@ def main() -> int:
         print(f"not a directory: {root}", file=sys.stderr)
         return 1
 
-    po_files = 0
-    xml_files = 0
-    po_repl = 0
-    xml_repl = 0
-    po_changed = 0
-    xml_changed = 0
+    po_files = xml_files = gui_files = 0
+    po_repl = xml_repl = gui_repl = 0
+    po_changed = xml_changed = gui_changed = 0
 
     for dirpath, _, filenames in os.walk(root):
         for fn in filenames:
             path = os.path.join(dirpath, fn)
             if should_skip(path):
                 continue
+            norm = path.replace("\\", "/")
             if fn == "strings.po":
                 r, c = patch_po(path)
                 po_files += 1
@@ -207,10 +220,22 @@ def main() -> int:
                 xml_files += 1
                 xml_repl += r
                 xml_changed += c
+            elif fn.endswith(".xml") and (
+                "/addons/skin." in norm
+                or "/xbmc/dialogs/" in norm
+                or "/xbmc/window/" in norm
+                or "/guilib/" in norm
+            ):
+                # Skin XML + a few GUI XML templates under source
+                r, c = patch_gui_xml(path)
+                gui_files += 1
+                gui_repl += r
+                gui_changed += c
 
     msg = (
         f"rebrand-ui-strings: scanned {po_files} strings.po ({po_changed} changed, ~{po_repl} Kodi->{DISPLAY}), "
-        f"{xml_files} addon.xml ({xml_changed} changed, ~{xml_repl} replacements)"
+        f"{xml_files} addon.xml ({xml_changed} changed, ~{xml_repl}), "
+        f"{gui_files} gui/skin xml ({gui_changed} changed, ~{gui_repl})"
     )
     try:
         print(msg, flush=True)
