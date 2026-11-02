@@ -1,22 +1,11 @@
-# Custom icon & splash
+# Branding images (1.4)
 
-To use a custom icon or splash screen, upload image files to this folder in GitHub:
+Source logo: husham.com site mark
+`https://www.husham.com/wp-content/uploads/2025/02/husham_logo_nobackground-1.png`
+(round colourful vertical-bar H with check/arrow and navy dot).
 
-## icon.png
-- **File name:** `icon.png` (must be exactly this name)
-- **Recommended size:** 1024 × 1024 pixels
-- **Format:** PNG with transparency supported
-
-## splash.png
-- **File name:** `splash.png` (must be exactly this name)
-- **Recommended size:** 1920 × 1080 pixels
-- **Format:** PNG
-
-## How to upload in GitHub (no desktop app needed)
-
-1. Go to your repo on github.com
-2. Click into the `kodi-config/` folder
-3. Click **Add file → Upload files**
-4. Drag and drop your PNG file
-5. Scroll down and click **Commit changes**
-6. Trigger a new build — the image will be baked in automatically
+Files (PNG/JPG checked into git as `.b64` siblings for size):
+- `icon.png` — app / launcher / dialog icon (512×512)
+- `splash.png` — startup splash
+- `skin-home-logo.png` — Estuary home / vendor logo
+- `skin-wallpaper.jpg` / `skin-fanart.jpg` — backgrounds with watermark
