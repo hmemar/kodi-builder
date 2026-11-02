@@ -1,0 +1,21 @@
+Husham Play
+Copyright (C) Dr Husham Memar and contributors
+
+Based on the open-source Kodi project (GPL-2.0-or-later).
+Source: https://github.com/hmemar/kodi-builder and https://github.com/xbmc/xbmc
+Husham Play is not affiliated with or endorsed by the XBMC Foundation / Kodi Foundation.
+
+Husham Play provides no content. Only use services and media you have the right to access.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, see https://www.gnu.org/licenses/.
