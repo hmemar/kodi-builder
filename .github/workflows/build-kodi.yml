@@ -1188,7 +1188,7 @@ jobs:
             # Strip any .apk extension the user may have included, then re-add it
             SAFE_NAME=$(echo "$CUSTOM" | sed 's/\.apk$//i' | tr ' ' '_')
           else
-            SAFE_NAME="Husham-Play-1.3-android-${ABI}"
+            SAFE_NAME="Husham-Play-1.4-android-${ABI}"
           fi
 
           OUT_NAME="${SAFE_NAME}.apk"
@@ -1221,8 +1221,8 @@ jobs:
         if: github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v1.3-android-${{ steps.abi.outputs.value }}-${{ github.run_number }}
-          name: "Husham Play 1.3 — Android ${{ steps.abi.outputs.value }} — Build #${{ github.run_number }}"
+          tag_name: v1.4-android-${{ steps.abi.outputs.value }}-${{ github.run_number }}
+          name: "Husham Play 1.4 — Android ${{ steps.abi.outputs.value }} — Build #${{ github.run_number }}"
           body: |
             ## ${{ github.event.inputs.app_name }} APK
 

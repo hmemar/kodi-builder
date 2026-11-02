@@ -70,7 +70,6 @@ jobs:
           if (-not (Test-Path "$app\kodi.exe")) { Get-ChildItem C:\kodi\project\Win32BuildSetup -Recurse -Depth 2 | Select -First 50; throw "application folder not built" }
           Rename-Item "$app\kodi.exe" "Husham Play.exe"
           Copy-Item "$env:GITHUB_WORKSPACE\kodi-config\sources.xml","$env:GITHUB_WORKSPACE\kodi-config\advancedsettings.xml","$env:GITHUB_WORKSPACE\kodi-config\favourites.xml" "$app\userdata\" -Force -ErrorAction SilentlyContinue
-          # Ensure branded addons from source tree are present in application\addons
           if (Test-Path "C:\kodi\addons") {
             Get-ChildItem "C:\kodi\addons" -Directory | ForEach-Object {
               $dest = Join-Path "$app\addons" $_.Name
@@ -79,7 +78,7 @@ jobs:
           }
           New-Item -ItemType Directory "$app\portable_data" -Force | Out-Null
           @"
-          Husham Play 1.3 for Windows x64 (portable)
+          Husham Play 1.4 for Windows x64 (portable)
           Unzip anywhere and run "Husham Play.exe". Settings live in portable_data\ when started with -p,
           e.g. create a shortcut: "Husham Play.exe" -p
           Based on open-source software licensed GPL-2.0-or-later.
@@ -90,28 +89,65 @@ jobs:
           Set-Content "$app\Husham Play (portable).bat" '@start "" "%~dp0Husham Play.exe" -p'
           $parent = Split-Path $app
           Rename-Item $app "Husham Play"
-          $zip = "C:\Husham-Play-1.3-windows-x64-portable.zip"
+          $zip = "C:\Husham-Play-1.4-windows-x64-portable.zip"
           Compress-Archive -Path "$parent\Husham Play" -DestinationPath $zip
           Get-Item $zip | Format-List Name,Length
           "file=$zip" >> $env:GITHUB_OUTPUT
+          "appdir=$parent\Husham Play" >> $env:GITHUB_OUTPUT
+
+      - name: Build NSIS setup installer
+        id: setup
+        shell: pwsh
+        run: |
+          choco install nsis -y --no-progress
+          $nsis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          if (-not (Test-Path $nsis)) { $nsis = "$env:ProgramFiles\NSIS\makensis.exe" }
+          if (-not (Test-Path $nsis)) { throw "makensis.exe not found" }
+          $src = "C:\kodi\project\Win32BuildSetup\BUILD_WIN32\Husham Play"
+          if (-not (Test-Path $src)) { throw "missing app folder $src" }
+          # Stage to a space-free path for NSIS File /r
+          $stage = "C:\hp-stage"
+          if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+          New-Item -ItemType Directory $stage | Out-Null
+          Copy-Item $src (Join-Path $stage "app") -Recurse -Force
+          Copy-Item "$env:GITHUB_WORKSPACE\packaging\windows\husham-play-setup.nsi" "$stage\setup.nsi" -Force
+          Copy-Item "$env:GITHUB_WORKSPACE\packaging\windows\LICENSE.txt" "$stage\LICENSE.txt" -Force
+          Copy-Item "C:\brand\icon.ico" "$stage\icon.ico" -Force
+          $out = "C:\Husham-Play-1.4-windows-x64-setup.exe"
+          Push-Location $stage
+          try {
+            & $nsis /V2 /DHP_VERSION=1.4 /DHP_SOURCE=app /DHP_OUTFILE=$out /DHP_ICON=icon.ico /DHP_LICENSE=LICENSE.txt setup.nsi
+            if ($LASTEXITCODE -ne 0) { throw "makensis failed: $LASTEXITCODE" }
+          } finally {
+            Pop-Location
+          }
+          if (-not (Test-Path $out)) { throw "setup exe not produced at $out" }
+          Get-Item $out | Format-List Name,Length
+          "file=$out" >> $env:GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Husham-Play-1.3-windows-x64
-          path: ${{ steps.pkg.outputs.file }}
+          name: Husham-Play-1.4-windows-x64
+          path: |
+            ${{ steps.pkg.outputs.file }}
+            ${{ steps.setup.outputs.file }}
 
       - name: Publish release
         if: github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.3-windows-${{ github.run_number }}
-          name: "Husham Play 1.3 — Windows x64 — Build #${{ github.run_number }}"
+          tag_name: v1.4-windows-${{ github.run_number }}
+          name: "Husham Play 1.4 — Windows x64 — Build #${{ github.run_number }}"
           body: |
-            ## Husham Play 1.3 for Windows (x64, portable)
-            Unzip and run `Husham Play.exe` (or `Husham Play (portable).bat` to keep settings in the folder). Unsigned, so SmartScreen will grumble: More info → Run anyway.
+            ## Husham Play 1.4 for Windows (x64)
+            Installer: run Husham-Play-1.4-windows-x64-setup.exe (Start menu + desktop shortcuts, Add/Remove Programs uninstaller).
+            Portable: unzip and run "Husham Play.exe" (or "Husham Play (portable).bat").
+            Unsigned, so SmartScreen will grumble: More info then Run anyway.
 
             Pre-configured with legal official add-ons, IPTV Simple Client (no playlist), Husham companion add-on and Husham Play skin. Provides no content.
 
             Based on open-source software licensed GPL-2.0-or-later. Source: this repository and upstream [xbmc/xbmc](https://github.com/xbmc/xbmc) (`${{ github.event.inputs.kodi_tag }}`).
             Husham Play is not affiliated with or endorsed by the XBMC Foundation / Kodi Foundation.
-          files: ${{ steps.pkg.outputs.file }}
+          files: |
+            ${{ steps.pkg.outputs.file }}
+            ${{ steps.setup.outputs.file }}
