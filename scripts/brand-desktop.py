@@ -102,6 +102,51 @@ if os.path.isfile(ci):
     else:
         log("CompileInfo GetAppName already patched or pattern missing")
 
+# 3b. Windows PE VERSIONINFO (Firewall / Properties / Publisher).
+# XBMC_PC.rc.in substitutes @APP_NAME@ / @COMPANY_NAME@ from version.txt at cmake
+# configure time. Firewall shows FileDescription + CompanyName for unsigned exes.
+# Keep APP_NAME=Kodi (paths) but set COMPANY_NAME and hardcode visible VERSIONINFO
+# strings to Husham Play / husham.com — do NOT claim XBMC/Kodi Foundation.
+vt = os.path.join(src, "version.txt")
+if os.path.isfile(vt):
+    vt_text = open(vt, encoding="utf-8").read()
+    vt2 = re.sub(r"(?m)^COMPANY_NAME\s+.*$", "COMPANY_NAME husham.com", vt_text, count=1)
+    # Optional user-facing website used by some About links via WEBSITE
+    vt2 = re.sub(r"(?m)^WEBSITE\s+.*$", "WEBSITE https://www.husham.com/", vt2, count=1)
+    if vt2 != vt_text:
+        open(vt, "w", encoding="utf-8", newline="\n").write(vt2)
+        log("version.txt COMPANY_NAME -> husham.com (APP_NAME kept Kodi)")
+    else:
+        log("version.txt COMPANY_NAME already husham.com or pattern missing")
+
+rc_in = os.path.join(src, "xbmc", "platform", "win32", "XBMC_PC.rc.in")
+if os.path.isfile(rc_in):
+    rc = open(rc_in, encoding="utf-8").read()
+    rc2 = rc
+    replacements = {
+        'VALUE "FileDescription", "@APP_NAME@"':
+            'VALUE "FileDescription", "Husham Play"',
+        'VALUE "InternalName", "@APP_NAME@.exe"':
+            'VALUE "InternalName", "Husham Play.exe"',
+        'VALUE "OriginalFilename", "@APP_NAME@.exe"':
+            'VALUE "OriginalFilename", "Husham Play.exe"',
+        'VALUE "ProductName", "@APP_NAME@ for Windows"':
+            'VALUE "ProductName", "Husham Play"',
+        'VALUE "LegalCopyright", "Copyright (c) @COMPANY_NAME@.  All rights reserved."':
+            'VALUE "LegalCopyright", "Copyright (c) husham.com. Based on open-source software (GPL-2.0-or-later)."',
+    }
+    for a, b in replacements.items():
+        if a in rc2:
+            rc2 = rc2.replace(a, b)
+        else:
+            log(f"XBMC_PC.rc.in pattern missing: {a[:40]}...")
+    # CompanyName still uses @COMPANY_NAME@ which now resolves to husham.com
+    if rc2 != rc:
+        open(rc_in, "w", encoding="utf-8", newline="\n").write(rc2)
+        log("XBMC_PC.rc.in VERSIONINFO -> Husham Play / husham.com")
+    else:
+        log("XBMC_PC.rc.in already patched or unchanged")
+
 # 4. unknown sources default on
 st = os.path.join(src, "system", "settings", "settings.xml")
 if os.path.isfile(st):
