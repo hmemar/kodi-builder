@@ -5,7 +5,7 @@
 !include "x64.nsh"
 
 !ifndef HP_VERSION
-  !define HP_VERSION "1.4"
+  !define HP_VERSION "1.5"
 !endif
 !ifndef HP_SOURCE
   !define HP_SOURCE "Husham Play"

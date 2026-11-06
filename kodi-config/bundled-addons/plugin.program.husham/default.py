@@ -254,7 +254,7 @@ def do_update_check():
     import json
     import urllib.request
     dialog = xbmcgui.Dialog()
-    local = '1.4'
+    local = '1.5'
     try:
         ver_file = xbmcaddon.Addon().getAddonInfo('path').rstrip('/\\') + '/../../../userdata/../'
     except Exception:
@@ -263,7 +263,7 @@ def do_update_check():
     try:
         req = urllib.request.Request(
             'https://api.github.com/repos/hmemar/kodi-builder/releases/latest',
-            headers={'User-Agent': 'HushamPlay/1.4', 'Accept': 'application/vnd.github+json'},
+            headers={'User-Agent': 'HushamPlay/1.5', 'Accept': 'application/vnd.github+json'},
         )
         with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode('utf-8'))
@@ -352,7 +352,7 @@ def main():
         return
     if action == 'about':
         xbmcgui.Dialog().ok(
-            'Husham Play 1.4',
+            'Husham Play 1.5',
             'Free media player by Dr Husham Memar.\n'
             'Based on the open-source Kodi project (GPL-2.0-or-later).\n'
             'Not affiliated with or endorsed by the Kodi Foundation / XBMC Foundation.\n'
