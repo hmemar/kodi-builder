@@ -349,6 +349,12 @@ jobs:
           grep -n 'requires access\|Starting ' ~/kodi/tools/android/packaging/xbmc/src/Splash.java.in || true
           echo "---- CompileInfo GetAppName ----"
           grep -n -A2 'GetAppName' ~/kodi/xbmc/CompileInfo.cpp.in | head -20 || true
+          echo "---- AndroidManifest label / TV leanback / banner ----"
+          MANIFEST=~/kodi/tools/android/packaging/xbmc/AndroidManifest.xml.in
+          grep -n -E 'android:label=|android:banner=|android:logo=|LEANBACK_LAUNCHER|android.software.leanback' "$MANIFEST" || true
+          STRINGS=~/kodi/tools/android/packaging/xbmc/res/values/strings.xml.in
+          [ -f "$STRINGS" ] || STRINGS=~/kodi/tools/android/packaging/xbmc/strings.xml.in
+          grep -n 'app_name' "$STRINGS" || true
 
       - name: Apply custom package ID
         if: github.event.inputs.package_id != 'org.xbmc.kodi'
@@ -1188,7 +1194,7 @@ jobs:
             # Strip any .apk extension the user may have included, then re-add it
             SAFE_NAME=$(echo "$CUSTOM" | sed 's/\.apk$//i' | tr ' ' '_')
           else
-            SAFE_NAME="Husham-Play-1.4-android-${ABI}"
+            SAFE_NAME="Husham-Play-1.5-android-${ABI}"
           fi
 
           OUT_NAME="${SAFE_NAME}.apk"
@@ -1221,10 +1227,10 @@ jobs:
         if: github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v1.4-android-${{ steps.abi.outputs.value }}-${{ github.run_number }}
-          name: "Husham Play 1.4 — Android ${{ steps.abi.outputs.value }} — Build #${{ github.run_number }}"
+          tag_name: v1.5-android-${{ steps.abi.outputs.value }}-${{ github.run_number }}
+          name: "Husham Play 1.5 — Android ${{ steps.abi.outputs.value }} — Build #${{ github.run_number }}"
           body: |
-            ## ${{ github.event.inputs.app_name }} APK
+            ## Husham Play 1.5 — ${{ github.event.inputs.app_name }} APK
 
             Free media player based on the open-source Kodi project (GPL-2.0-or-later). Source: this repository and upstream [xbmc/xbmc](https://github.com/xbmc/xbmc). Not affiliated with or endorsed by the XBMC Foundation.
 
@@ -1240,11 +1246,12 @@ jobs:
             | Unknown sources | ${{ github.event.inputs.unknown_sources == 'true' && 'Pre-enabled' || 'Default (off)' }} |
             | Built | ${{ github.run_number }} |
 
-            ### Install
-            1. Download the `.apk` file below
-            2. Transfer to your Android device
-            3. Enable **Unknown sources** in Android Settings → Security
-            4. Open the APK file on the device to install
+            ### Install (phone, tablet, Android TV, Fire TV)
+            1. Download the `.apk` file below (`Husham-Play-1.5-android-…`)
+            2. Transfer it to the device (USB, Files, or a Downloader-style app on TV)
+            3. Enable **Unknown sources** / install from this source in system settings
+            4. Open the APK to install. The launcher name and Android TV / Fire TV banner show **Husham Play** (leanback launcher + 320×180 banner).
+            Use **arm64-v8a** on modern TVs and phones; **armeabi-v7a** only on older 32-bit devices.
 
             > Built automatically by GitHub Actions from [xbmc/xbmc](https://github.com/xbmc/xbmc)
           files: ${{ steps.sign.outputs.apk_path }}

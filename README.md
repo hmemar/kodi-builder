@@ -1,19 +1,20 @@
 # Husham Play — custom media player builder
 
-**Husham Play 1.1** is a free, international media player by Dr Husham Memar.
+**Husham Play 1.5** is a free, international media player by Dr Husham Memar.
 
 It is based on the open-source Kodi project. Do not use the name "Kodi" or official Kodi logos in distribution marketing. Husham Play is **not affiliated with or endorsed by** the Kodi Foundation / XBMC Foundation.
 
 Package ID (Android): `com.husham.media` (unchanged from the earlier Husham Media name so installs update in place). Unrelated to the paid HushPlay smart-TV app.
 
-## What 1.1 includes
+## What 1.5 includes
 
-- Branding: Husham Play icon, splash, and **skin.husham.play** (Estuary fork, GPL / CC BY-SA — Estuary credit retained)
+- Branding: Husham Play icon (husham.com logo), splash, and **skin.husham.play** (Estuary fork, GPL / CC BY-SA — Estuary credit retained). User-visible "Kodi" wording is replaced except where licence or credit attribution is required.
 - **PVR IPTV Simple Client** pre-installed with **no playlist** (add your own legal M3U / Xtream)
-- Official international add-ons only (YouTube, Internet Archive, Radio Browser, SoundCloud, Podcasts, OpenSubtitles.com, Open-Meteo weather, InputStream Helper + Adaptive/FFmpegDirect/RTMP where platform binaries exist)
+- Official international add-ons only (Internet Archive, Radio Browser, SoundCloud, Podcasts, OpenSubtitles.com, Open-Meteo weather, InputStream Helper + Adaptive/FFmpegDirect/RTMP where platform binaries exist). The YouTube home tile opens the official @husham122 channel in a browser.
 - **plugin.program.husham**: first-run “Add your own content” wizard, links, VPN offers (affiliate disclosure), backup/restore, privacy note, update check, official streaming website/app launchers (text names only)
 - International defaults (no forced UK language/region/timezone)
 - Favourites home tiles: Add your own content, YouTube, Husham, husham.com
+- Installers: Windows NSIS setup.exe, Linux tarball + `install.sh`, macOS unsigned .dmg, Android APK ready for phones, Android TV and Fire TV (leanback launcher + banner)
 
 See [THIRD-PARTY-ADDONS.md](THIRD-PARTY-ADDONS.md) for licences and sources.
 
