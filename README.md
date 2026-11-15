@@ -1,13 +1,14 @@
 # Husham Play — custom media player builder
 
-**Husham Play 1.5** is a free, international media player by Dr Husham Memar.
+**Husham Play 1.6** is a free, international media player by Dr Husham Memar.
 
 It is based on the open-source Kodi project. Do not use the name "Kodi" or official Kodi logos in distribution marketing. Husham Play is **not affiliated with or endorsed by** the Kodi Foundation / XBMC Foundation.
 
 Package ID (Android): `com.husham.media` (unchanged from the earlier Husham Media name so installs update in place). Unrelated to the paid HushPlay smart-TV app.
 
-## What 1.5 includes
+## What 1.6 includes
 
+- TV / skin fixes: packed `Textures.xbt` is now copied into `skin.husham.play` (1.5 shipped the fork with no media, so the home-menu focus bar, dialog panels and icons were invisible), Setup is a top-level home menu item, the first-run wizard is easier to reach, and PVR IPTV Simple stays disabled until you add a playlist.
 - Branding: Husham Play icon (husham.com logo), splash, and **skin.husham.play** (Estuary fork, GPL / CC BY-SA — Estuary credit retained). User-visible "Kodi" wording is replaced except where licence or credit attribution is required.
 - **PVR IPTV Simple Client** pre-installed with **no playlist** (add your own legal M3U / Xtream)
 - Official international add-ons only (Internet Archive, Radio Browser, SoundCloud, Podcasts, OpenSubtitles.com, Open-Meteo weather, InputStream Helper + Adaptive/FFmpegDirect/RTMP where platform binaries exist). The YouTube home tile opens the official @husham122 channel in a browser.
