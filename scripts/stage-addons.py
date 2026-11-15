@@ -31,7 +31,13 @@ def _download(url: str) -> bytes:
         return resp.read()
 
 
-def _register(src: str, addon_id: str) -> None:
+# Disabled until the setup wizard writes a playlist (avoids empty PVR startup).
+OPTIONAL_ADDONS = frozenset({"pvr.iptvsimple"})
+
+
+def _register(src: str, addon_id: str, optional: bool | None = None) -> None:
+    if optional is None:
+        optional = addon_id in OPTIONAL_ADDONS
     inst = os.path.join(src, "cmake", "installdata", "common", "addons.txt")
     man = os.path.join(src, "system", "addon-manifest.xml")
     entry = f"addons/{addon_id}/*"
@@ -42,10 +48,16 @@ def _register(src: str, addon_id: str) -> None:
                 fh.write(f"\n{entry}\n")
     if os.path.isfile(man):
         text = open(man, encoding="utf-8").read()
-        if f"<addon>{addon_id}</addon>" not in text:
-            open(man, "w", encoding="utf-8").write(
-                text.replace("</addons>", f"  <addon>{addon_id}</addon>\n</addons>")
-            )
+        # Drop any previous form of this id so we can re-insert consistently.
+        pat = r'[ \t]*<addon(?:\s+optional="(?:true|false)")?>' + re.escape(addon_id) + r'</addon>\s*'
+        text = re.sub(pat, '', text)
+        if optional:
+            tag = f'  <addon optional="true">{addon_id}</addon>\n'
+        else:
+            tag = f"  <addon>{addon_id}</addon>\n"
+        open(man, "w", encoding="utf-8").write(
+            text.replace("</addons>", tag + "</addons>")
+        )
 
 
 def _extract_zip(data: bytes, dest_addons: str) -> list[str]:

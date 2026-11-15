@@ -14,11 +14,15 @@ import xml.etree.ElementTree as ET
 
 SKIN_ID = "skin.husham.play"
 SKIN_NAME = "Husham Play"
-# Brand colours from icon: navy #0F1738, orange #FF5E3A
+# Brand colours from icon: navy #0F1738, orange #FF5E3A.
+# dialog_tint must CONTRAST with primary_background / the navy wallpaper.
+# Stock Estuary uses FF1A2123 (charcoal) on a teal wallpaper; 1.5 used the
+# same navy for both, so once textures are present the OK dialog panel would
+# still vanish into the home background.
 COLORS = {
     "primary_background": "FF0F1738",
     "secondary_background": "33FF5E3A",
-    "dialog_tint": "FF0F1738",
+    "dialog_tint": "FF1A2123",
     "button_focus": "FFFF5E3A",
     "button_alt_focus": "80FF5E3A",
     "selected": "FFFF5E3A",
@@ -179,22 +183,134 @@ def register_skin(src: str) -> None:
         _log(f"default skin -> {SKIN_ID}")
 
 
-def add_home_wizard_tile_hint(skin_dir: str) -> None:
-    """Ensure favourites widget is emphasized - Estuary already shows Favourites on home.
-    Write a short skin-settings default file if present.
+SETUP_ITEM = """						<!-- HUSHAM_SETUP_MENU -->
+						<item>
+							<label>Setup</label>
+							<onclick>RunPlugin(plugin://plugin.program.husham/?action=wizard)</onclick>
+							<property name="menu_id">$NUMBER[22000]</property>
+							<thumb>icons/sidemenu/addons.png</thumb>
+							<property name="id">hushamsetup</property>
+						</item>
+"""
+
+SETUP_PANEL = """				<!-- HUSHAM_SETUP_PANEL -->
+				<control type="group" id="22000">
+					<visible>String.IsEqual(Container(9000).ListItem.Property(id),hushamsetup)</visible>
+					<include content="Visible_Right_Delayed">
+						<param name="id" value="hushamsetup"/>
+					</include>
+					<include content="ImageWidget">
+						<param name="text_label" value="Add your own content: an Xtream login, an M3U playlist link, or a folder of videos you have the right to play. Husham Play provides no content." />
+						<param name="button_label" value="Open setup" />
+						<param name="button_onclick" value="RunPlugin(plugin://plugin.program.husham/?action=wizard)"/>
+						<param name="button_id" value="22100"/>
+						<param name="visible" value="true"/>
+						<param name="button2_label" value="Open Husham menu"/>
+						<param name="button2_onclick" value="ActivateWindow(Programs,plugin://plugin.program.husham/,return)"/>
+					</include>
+				</control>
+"""
+
+
+def add_home_setup_item(skin_dir: str) -> None:
+    """Put a visible Setup item at the top of the Estuary home menu.
+
+    1.5 only exposed the wizard under Favourites, so it was easy to miss on
+    a TV. Also contrast the focused vs unfocused menu labels so the
+    selection is obvious at sofa distance once lists/focus.png is packed.
     """
-    # Patch Includes_Home to add a dedicated 'Add your own content' button near power/widgets if feasible.
-    inc = os.path.join(skin_dir, "xml", "Includes_Home.xml")
-    if not os.path.isfile(inc):
+    home = os.path.join(skin_dir, "xml", "Home.xml")
+    if not os.path.isfile(home):
         return
-    text = open(inc, encoding="utf-8").read()
-    marker = "<!-- HUSHAM_WIZARD_TILE -->"
-    if marker in text:
-        return
-    # Insert a comment anchor documenting the favourites-based tile (actual entry in favourites.xml)
-    text = marker + "\n<!-- Home tile: 'Add your own content' comes from userdata/favourites.xml -->\n" + text
-    open(inc, "w", encoding="utf-8").write(text)
-    _log("Includes_Home annotated for wizard tile")
+    text = open(home, encoding="utf-8").read()
+    changed = False
+
+    if "<!-- HUSHAM_SETUP_MENU -->" not in text:
+        # First item in the main menu list (id 9000) is Movies ($LOCALIZE[342]).
+        needle = "\t\t\t\t\t<content>\n\t\t\t\t\t\t<item>\n\t\t\t\t\t\t\t<label>$LOCALIZE[342]</label>"
+        if needle not in text:
+            # Fall back to a looser match
+            needle = "<content>\n\t\t\t\t\t\t<item>\n\t\t\t\t\t\t\t<label>$LOCALIZE[342]</label>"
+            repl = "<content>\n" + SETUP_ITEM + "\t\t\t\t\t\t<item>\n\t\t\t\t\t\t\t<label>$LOCALIZE[342]</label>"
+        else:
+            repl = "\t\t\t\t\t<content>\n" + SETUP_ITEM + "\t\t\t\t\t\t<item>\n\t\t\t\t\t\t\t<label>$LOCALIZE[342]</label>"
+        if needle not in text:
+            _log("WARN: Home.xml movies item not found — Setup menu item not inserted")
+        else:
+            text = text.replace(needle, repl, 1)
+            changed = True
+            _log("Home.xml Setup menu item inserted")
+
+    if "<!-- HUSHAM_SETUP_PANEL -->" not in text:
+        # Insert the right-hand panel just before the left menu ContentPanel group.
+        anchor = "\t\t\t<control type=\"group\">\n\t\t\t\t<depth>DepthContentPanel</depth>"
+        if anchor not in text:
+            _log("WARN: Home.xml ContentPanel group not found — Setup panel not inserted")
+        else:
+            text = text.replace(anchor, SETUP_PANEL + anchor, 1)
+            changed = True
+            _log("Home.xml Setup widget panel inserted")
+
+    # Focused label stays bright white; unfocused items go grey so the
+    # current item is obvious even if the orange focus texture is faint.
+    unfocused_label = """\t\t\t\t\t\t<control type="label">
+\t\t\t\t\t\t\t<left>104</left>
+\t\t\t\t\t\t\t<top>0</top>
+\t\t\t\t\t\t\t<height>95</height>
+\t\t\t\t\t\t\t<width>560</width>
+\t\t\t\t\t\t\t<aligny>center</aligny>
+\t\t\t\t\t\t\t<font>font37</font>
+\t\t\t\t\t\t\t<label>$INFO[ListItem.Label]</label>
+\t\t\t\t\t\t\t<shadowcolor>text_shadow</shadowcolor>
+\t\t\t\t\t\t</control>
+\t\t\t\t\t</itemlayout>"""
+    unfocused_repl = """\t\t\t\t\t\t<control type="label">
+\t\t\t\t\t\t\t<left>104</left>
+\t\t\t\t\t\t\t<top>0</top>
+\t\t\t\t\t\t\t<height>95</height>
+\t\t\t\t\t\t\t<width>560</width>
+\t\t\t\t\t\t\t<aligny>center</aligny>
+\t\t\t\t\t\t\t<font>font37</font>
+\t\t\t\t\t\t\t<textcolor>grey</textcolor>
+\t\t\t\t\t\t\t<label>$INFO[ListItem.Label]</label>
+\t\t\t\t\t\t\t<shadowcolor>text_shadow</shadowcolor>
+\t\t\t\t\t\t</control>
+\t\t\t\t\t</itemlayout>"""
+    if "<textcolor>grey</textcolor>" not in text and unfocused_label in text:
+        text = text.replace(unfocused_label, unfocused_repl, 1)
+        changed = True
+        _log("Home.xml unfocused menu labels set to grey")
+
+    focused_label = """\t\t\t\t\t\t<control type="label">
+\t\t\t\t\t\t\t<left>104</left>
+\t\t\t\t\t\t\t<top>0</top>
+\t\t\t\t\t\t\t<height>95</height>
+\t\t\t\t\t\t\t<width>560</width>
+\t\t\t\t\t\t\t<aligny>center</aligny>
+\t\t\t\t\t\t\t<font>font37</font>
+\t\t\t\t\t\t\t<label>$INFO[ListItem.Label]</label>
+\t\t\t\t\t\t\t<shadowcolor>text_shadow</shadowcolor>
+\t\t\t\t\t\t</control>
+\t\t\t\t\t</focusedlayout>"""
+    focused_repl = """\t\t\t\t\t\t<control type="label">
+\t\t\t\t\t\t\t<left>104</left>
+\t\t\t\t\t\t\t<top>0</top>
+\t\t\t\t\t\t\t<height>95</height>
+\t\t\t\t\t\t\t<width>560</width>
+\t\t\t\t\t\t\t<aligny>center</aligny>
+\t\t\t\t\t\t\t<font>font37</font>
+\t\t\t\t\t\t\t<textcolor>white</textcolor>
+\t\t\t\t\t\t\t<label>$INFO[ListItem.Label]</label>
+\t\t\t\t\t\t\t<shadowcolor>text_shadow</shadowcolor>
+\t\t\t\t\t\t</control>
+\t\t\t\t\t</focusedlayout>"""
+    if "<textcolor>white</textcolor>" not in text and focused_label in text:
+        text = text.replace(focused_label, focused_repl, 1)
+        changed = True
+        _log("Home.xml focused menu labels set to white")
+
+    if changed:
+        open(home, "w", encoding="utf-8").write(text)
 
 
 def main() -> int:
@@ -207,7 +323,7 @@ def main() -> int:
     patch_colors(skin_dir)
     replace_media(skin_dir, cfg)
     patch_home_logo(skin_dir)
-    add_home_wizard_tile_hint(skin_dir)
+    add_home_setup_item(skin_dir)
     register_skin(src)
     _log("skin branding done")
     return 0
