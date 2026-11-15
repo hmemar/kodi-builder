@@ -937,6 +937,14 @@ jobs:
 
               echo "✅ Injected staged addons into PREFIX share"
             fi
+            # skin.husham.play is a pre-build fork of Estuary; cmake only
+            # packs Textures.xbt for skin.estuary. Copy the packed bundles
+            # so focus highlights, dialog panels and icons actually appear.
+            python3 "${{ github.workspace }}/scripts/copy-skin-textures.py" "$SHARE_DIR/addons"
+            if [ -f "$SHARE_DIR/system/addon-manifest.xml" ]; then
+              python3 "${{ github.workspace }}/scripts/patch-addon-manifest.py" "$SHARE_DIR/system/addon-manifest.xml"
+            fi
+
             echo "PREFIX share userdata contents:"
             ls -la "$SHARE_DIR/userdata/" || true
           else
@@ -1016,6 +1024,16 @@ jobs:
               # Keep assets add-on trees but remove .so there (jni copy is the real one)
               find "$ASSETS_DIR/addons" -type f -name '*.so' -delete 2>/dev/null || true
             fi
+
+            python3 "${{ github.workspace }}/scripts/copy-skin-textures.py" "$ASSETS_DIR/addons"
+            if [ -f "$ASSETS_DIR/system/addon-manifest.xml" ]; then
+              python3 "${{ github.workspace }}/scripts/patch-addon-manifest.py" "$ASSETS_DIR/system/addon-manifest.xml"
+            fi
+            if [ ! -f "$ASSETS_DIR/addons/skin.husham.play/media/Textures.xbt" ]; then
+              echo "ERROR: skin.husham.play/media/Textures.xbt missing from assets — aborting so we do not ship a skin with invisible focus/dialogs"
+              exit 1
+            fi
+            NEEDS_REPACK=true
 
             # favourites.xml for home wizard tile
             FAV_SRC="${{ github.workspace }}/kodi-config/favourites.xml"
@@ -1194,7 +1212,7 @@ jobs:
             # Strip any .apk extension the user may have included, then re-add it
             SAFE_NAME=$(echo "$CUSTOM" | sed 's/\.apk$//i' | tr ' ' '_')
           else
-            SAFE_NAME="Husham-Play-1.5-android-${ABI}"
+            SAFE_NAME="Husham-Play-1.6-android-${ABI}"
           fi
 
           OUT_NAME="${SAFE_NAME}.apk"
@@ -1227,10 +1245,10 @@ jobs:
         if: github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v1.5-android-${{ steps.abi.outputs.value }}-${{ github.run_number }}
-          name: "Husham Play 1.5 — Android ${{ steps.abi.outputs.value }} — Build #${{ github.run_number }}"
+          tag_name: v1.6-android-${{ steps.abi.outputs.value }}-${{ github.run_number }}
+          name: "Husham Play 1.6 — Android ${{ steps.abi.outputs.value }} — Build #${{ github.run_number }}"
           body: |
-            ## Husham Play 1.5 — ${{ github.event.inputs.app_name }} APK
+            ## Husham Play 1.6 — ${{ github.event.inputs.app_name }} APK
 
             Free media player based on the open-source Kodi project (GPL-2.0-or-later). Source: this repository and upstream [xbmc/xbmc](https://github.com/xbmc/xbmc). Not affiliated with or endorsed by the XBMC Foundation.
 
@@ -1247,7 +1265,7 @@ jobs:
             | Built | ${{ github.run_number }} |
 
             ### Install (phone, tablet, Android TV, Fire TV)
-            1. Download the `.apk` file below (`Husham-Play-1.5-android-…`)
+            1. Download the `.apk` file below (`Husham-Play-1.6-android-…`)
             2. Transfer it to the device (USB, Files, or a Downloader-style app on TV)
             3. Enable **Unknown sources** / install from this source in system settings
             4. Open the APK to install. The launcher name and Android TV / Fire TV banner show **Husham Play** (leanback launcher + 320×180 banner).

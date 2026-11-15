@@ -128,6 +128,14 @@ jobs:
             fi
             mkdir -p "$ROOT/share/kodi/userdata"
             cp "$HOME/kodi/userdata/"*.xml "$ROOT/share/kodi/userdata/" 2>/dev/null || true
+            python3 "${{ github.workspace }}/scripts/copy-skin-textures.py" "$ROOT/share/kodi/addons"
+            if [ -f "$ROOT/share/kodi/system/addon-manifest.xml" ]; then
+              python3 "${{ github.workspace }}/scripts/patch-addon-manifest.py" "$ROOT/share/kodi/system/addon-manifest.xml"
+            fi
+            if [ ! -f "$ROOT/share/kodi/addons/skin.husham.play/media/Textures.xbt" ]; then
+              echo "ERROR: skin.husham.play/media/Textures.xbt missing — aborting"
+              exit 1
+            fi
           fi
           cat > "$ROOT/husham-play" <<'SH'
           #!/bin/sh
@@ -152,7 +160,7 @@ jobs:
           rm -f "$ROOT/share/applications/"*.desktop
           cat > "$ROOT/install.sh" <<'SH'
           #!/bin/sh
-          # One-step installer for Husham Play 1.5 (Linux x86_64).
+          # One-step installer for Husham Play 1.6 (Linux x86_64).
           # Run from the extracted folder:  sudo ./install.sh
           set -e
           HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -178,18 +186,18 @@ jobs:
           if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then
             chown "$REAL_USER:" "$USER_HOME/.local/share/applications/husham-play.desktop" || true
           fi
-          echo "Husham Play 1.5 installed to $DEST"
+          echo "Husham Play 1.6 installed to $DEST"
           echo "Start it from your applications menu, or run: $DEST/husham-play"
           SH
           sed -i 's/^          //' "$ROOT/install.sh"
           chmod +x "$ROOT/install.sh"
           cat > "$ROOT/README-HUSHAM-PLAY.txt" <<'R'
-          Husham Play 1.5 for Linux x86_64 (built on Ubuntu 22.04)
+          Husham Play 1.6 for Linux x86_64 (built on Ubuntu 22.04)
           Easy install:
-            tar -xJf Husham-Play-1.5-linux-x86_64.tar.xz
+            tar -xJf Husham-Play-1.6-linux-x86_64.tar.xz
             sudo ./husham-play/install.sh
           Manual install:
-            sudo tar -xJf Husham-Play-1.5-linux-x86_64.tar.xz -C /opt
+            sudo tar -xJf Husham-Play-1.6-linux-x86_64.tar.xz -C /opt
             cp /opt/husham-play/husham-play.desktop ~/.local/share/applications/
           Run:  /opt/husham-play/husham-play
           Needs the runtime libraries of Ubuntu 22.04 or later / Debian 12. Built on Ubuntu 22.04 only.
@@ -202,25 +210,25 @@ jobs:
           sed -i 's/^          //' "$ROOT/README-HUSHAM-PLAY.txt"
           cp "$HOME/kodi/LICENSE.md" "$ROOT/LICENSE.md" 2>/dev/null || true
           cd "$HOME/stage/opt"
-          tar -cJf "$HOME/Husham-Play-1.5-linux-x86_64.tar.xz" husham-play
-          ls -la "$HOME/Husham-Play-1.5-linux-x86_64.tar.xz"
-          echo "file=$HOME/Husham-Play-1.5-linux-x86_64.tar.xz" >> $GITHUB_OUTPUT
+          tar -cJf "$HOME/Husham-Play-1.6-linux-x86_64.tar.xz" husham-play
+          ls -la "$HOME/Husham-Play-1.6-linux-x86_64.tar.xz"
+          echo "file=$HOME/Husham-Play-1.6-linux-x86_64.tar.xz" >> $GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Husham-Play-1.5-linux-x86_64
+          name: Husham-Play-1.6-linux-x86_64
           path: ${{ steps.pkg.outputs.file }}
 
       - name: Publish release
         if: github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5-linux-${{ github.run_number }}
-          name: "Husham Play 1.5 — Linux x86_64 — Build #${{ github.run_number }}"
+          tag_name: v1.6-linux-${{ github.run_number }}
+          name: "Husham Play 1.6 — Linux x86_64 — Build #${{ github.run_number }}"
           body: |
-            ## Husham Play 1.5 for Linux (x86_64)
-            Easy install: `tar -xJf Husham-Play-1.5-linux-x86_64.tar.xz && sudo ./husham-play/install.sh`
-            (or extract to /opt: `sudo tar -xJf Husham-Play-1.5-linux-x86_64.tar.xz -C /opt`, then run `/opt/husham-play/husham-play`).
+            ## Husham Play 1.6 for Linux (x86_64)
+            Easy install: `tar -xJf Husham-Play-1.6-linux-x86_64.tar.xz && sudo ./husham-play/install.sh`
+            (or extract to /opt: `sudo tar -xJf Husham-Play-1.6-linux-x86_64.tar.xz -C /opt`, then run `/opt/husham-play/husham-play`).
             Built on Ubuntu 22.04 only; needs Ubuntu 22.04+ / Debian 12 runtime libraries.
 
             Pre-configured with legal official add-ons, Husham companion add-on and Husham Play skin. Provides no content.
